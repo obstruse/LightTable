@@ -7,6 +7,7 @@ import time
 
 import pygame
 from pygame.locals import *
+import select
 
 # config file
 from configparser import ConfigParser
@@ -75,7 +76,7 @@ print("cam initialized")
 # initialize display surface
 # The pygame surface we are going to draw onto. 
 # /!\ It must be the exact same size of the target display /!\
-lcd = pygame.Surface(320,240)
+lcd = pygame.Surface((320,240))
 #lcd = pygame.display.set_mode((640,480),pygame.FULLSCREEN)      # pixel dimension of LCD is 320,240, OS configured to 640,480
 lcdRes = lcd.get_size()
 lcdRect = lcd.get_rect()
@@ -87,9 +88,9 @@ touch = evdev.InputDevice('/dev/input/touchscreen')
 # (so the mouse pointer won't move on X when we touch the TFT screen)
 touch.grab()
 # Prints some info on how evdev sees our input device
-print(touch)
+#print(touch)
 # Even more info for curious people
-print(touch.capabilities())
+#print(touch.capabilities())
 
 # don't need this...
 def getPixelsFromCoordinates(coords):
@@ -135,7 +136,12 @@ active = True
 while active:
     timer.tick(20)
     
-    events = touch.read()
+    touchEvent, nonEvent, nonEvent = select.select([touch],[], [], 0 )
+    if touchEvent:
+        events = touch.read()
+    else:
+        events = []
+
     for e in events:
         if e.type == evdev.ecodes.EV_ABS:   # touch coordinates
             if e.code == 53:
