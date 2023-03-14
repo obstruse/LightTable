@@ -108,6 +108,9 @@ Down  = pygame.Rect((width/4  , height*3/4) ,(width/2, height/4) )
 EXPnum  = font.render('9999', True, WHITE)
 EXPnumPos  = EXPnum.get_rect(center=(width-60,60))
 
+ISOnum  = font.render('9999', True, WHITE)
+ISOnumPos  = ISOnum.get_rect(center=(width-60,120))
+
 
 
 
@@ -196,9 +199,15 @@ while active:
                 with open('config.ini', 'w') as f:
                     config.write(f)
 
+    lcd.fill(BLACK)
+
     EXPnum = font.render('%d'%camera.exposure_speed, True, WHITE)
     textPos = EXPnum.get_rect(center=EXPnumPos.center)
     lcd.blit(EXPnum,textPos)
+
+    ISOnum = font.render('%d'%camera.iso, True, WHITE)
+    textPos = ISOnum.get_rect(center=ISOnumPos.center)
+    lcd.blit(ISOnum,textPos)
 
     if camera.exposure_speed:
         speed = int(1/camera.exposure_speed*1000000)
