@@ -75,7 +75,7 @@ print("cam initialized")
 # initialize display surface
 # The pygame surface we are going to draw onto. 
 # /!\ It must be the exact same size of the target display /!\
-lcd = pygame.Surface(surfaceSize)
+lcd = pygame.Surface(320,240)
 #lcd = pygame.display.set_mode((640,480),pygame.FULLSCREEN)      # pixel dimension of LCD is 320,240, OS configured to 640,480
 lcdRes = lcd.get_size()
 lcdRect = lcd.get_rect()
