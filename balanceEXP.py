@@ -28,6 +28,16 @@ GPIO.setup(22, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 GPIO.setup(23, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 GPIO.setup(27, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
+# TFT backlight
+GPIO.setwarnings(False)     # want to leave #18 OUTPUT and set to zero at end of program. generates warning
+GPIO.setup(18, GPIO.OUT)
+
+def tftOn():
+    GPIO.output(18,GPIO.HIGH)
+
+def tftOff():
+    GPIO.output(18,GPIO.LOW)
+
 def callback(channel):
     print(f"callback channel {channel}")
     pygame.event.post(pygame.event.Event(pygame.KEYUP, key=channel))
@@ -39,8 +49,9 @@ GPIO.add_event_detect(27, GPIO.FALLING, callback=callback, bouncetime=300)
 
 # initialize display environment
 # Note that we don't instantiate any display!
-pygame.init()
-#pygame.display.init()
+###pygame.init()
+pygame.font.init()
+pygame.display.init()
 #pygame.display.set_caption('Camera')
 font = pygame.font.SysFont(None,30)
 
@@ -62,11 +73,15 @@ cameraRes = camera.resolution
 #else:
 #    camera.framerate = shutter
 #camera.shutter_speed = int (1000000/shutter)
-#camera.framerate_range = (1,40)    # low rate (1 FPS) is longest exposure allowed. 
 #camera.exposure_mode = 'off'
+camera.framerate_range = (1,40)    # low rate (1 FPS) is longest exposure allowed. 
 camera.iso           = iso
 camera.awb_mode      = 'auto'
 camera.exposure_mode = 'auto'
+#camera.framerate     = 10
+camera.annotate_text_size = 64
+camera.annotate_background = True
+
 #camera.awb_mode = 'tungsten'
 #camera.annotate_text_size = 64
 #camera.annotate_background = True
@@ -133,7 +148,8 @@ zoomX = zoomY = (1-zoomLevel)/2             # zoom box in middle
 
 lcd.fill((0,0,0))
 displayUpdate()
-#camera.start_preview()
+camera.start_preview()
+tftOn()
 
 active = True
 while active:
@@ -213,13 +229,18 @@ while active:
         speed = int(1/camera.exposure_speed*1000000)
     else :
         speed = 0
+    camera.annotate_text = f"Shutter: 1/{speed} ISO: {camera.iso}"
+
     
     displayUpdate()
 
 
-
-
+tftOff()
 camera.close()
 pygame.quit()
-GPIO.cleanup()
+
+# GPIO.cleanup() sets all pins to INPUT
+# unfortunately, when the TFT pin switches from OUTPUT to INPUT, it turns the TFT back on
+# Since the only other pins used are all INPUT anyway, don't need/want to use this
+#GPIO.cleanup()
 
