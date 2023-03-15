@@ -3,6 +3,7 @@
 import os
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 
+import gc
 import time
 
 import pygame
@@ -68,7 +69,7 @@ cameraRes = camera.resolution       # the actual resolution may not be the reque
 print(f"camera res: {cameraRes}\n")
 cameraBuffer = bytearray(3*cameraRes[0]*cameraRes[1])
 
-camera.framerate_range = (10,30)    # preview minimum is 10 FPS.
+camera.framerate_range = (20,30)    # preview minimum is 10 FPS.
 #camera.framerate = 1
 camera.iso           = iso
 camera.awb_mode      = 'auto'
@@ -86,6 +87,8 @@ lcd = pygame.Surface((320,240))
 #lcd = pygame.display.set_mode((640,480),pygame.FULLSCREEN)      # pixel dimension of LCD is 320,240, OS configured to 640,480
 lcdRes = lcd.get_size()
 lcdRect = lcd.get_rect()
+# frame buffer
+#frameBuffer = open("/dev/fb1","wb")
 
 # initialize touch
 import evdev
@@ -120,17 +123,26 @@ ISOnumPos  = ISOnum.get_rect(center=(width-60,120))
 
 
 
+#FBuf = open("/dev/fb1","wb")
 # Output to framebuffer #1
 # takes the place of pygame.display.update()
 def displayUpdate():
-    # We open the TFT screen's framebuffer as a binary file. Note that we will write bytes into it, hence the "wb" operator
-    f = open("/dev/fb1","wb")
+    # We open the TFT screen's framebuffer as a binary file. 
+    # Note that we will write bytes into it, hence the "wb" operator
+    ###f = open("/dev/fb1","wb")
+    # global frameBuffer
+    frameBuffer = open("/dev/fb1","wb")
     # According to the TFT screen specs, it supports only 16bits pixels depth
-    # Pygame surfaces use 24bits pixels depth by default, but the surface itself provides a very handy method to convert it.
-    # once converted, we write the full byte buffer of the pygame surface into the TFT screen framebuffer like we would in a plain file:
-    f.write(lcd.convert(16,0).get_buffer())
+    # pygame surfaces use 24bits pixels depth by default, 
+    # but the surface itself provides a very handy method to convert it.
+    # once converted, we write the full byte buffer of the pygame surface 
+    # into the TFT screen framebuffer like we would in a plain file:
+    frameBuffer.write(lcd.convert(16,0).get_buffer())
+    #frameBuffer.flush()
     # We can then close our access to the framebuffer
-    f.close()
+    # ...or we can leave it open...
+    # can't get it to work unless FB is opened each time, so might as well close too
+    frameBuffer.close()
     # why is there a wait here..v
     #time.sleep(0.1)
 
@@ -226,9 +238,7 @@ while active:
         speed = 0
     camera.annotate_text = f"Shutter: 1/{speed} ISO: {camera.iso}"
 
-    
     displayUpdate()
-
 
 tftOff()
 camera.close()
