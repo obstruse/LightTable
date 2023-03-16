@@ -1,7 +1,8 @@
 #!/usr/bin/python3
 
 import os
-os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
+#os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
+os.environ['DISPLAY'] = ":0.0"
 
 import gc
 import time
@@ -18,8 +19,9 @@ os.chdir(os.path.dirname(os.path.realpath(__file__)))
 # read config file
 config = ConfigParser()
 config.read('config.ini')
-#shutter = config.getint('PiCamera','shutter',fallback=30)
+shutter = config.getint('PiCamera','shutter',fallback=30)
 iso     = config.getint('PiCamera','iso',fallback=200)
+magnify = config.getint('PiCamera','magnify',fallback=4)
 
 # setup buttons
 import RPi.GPIO as GPIO
@@ -61,9 +63,8 @@ timer = pygame.time.Clock()
 # initialize camera
 from picamera import PiCamera
 #cameraRes = (4056,3040)
-#cameraRes = (2048,1520)
+highRes = (2048,1520)
 cameraRes = (320,240)
-#cameraRes = (640,480)
 camera = PiCamera(sensor_mode=0,resolution=cameraRes)
 cameraRes = camera.resolution       # the actual resolution may not be the requested resolution
 print(f"camera res: {cameraRes}\n")
@@ -76,17 +77,24 @@ camera.awb_mode      = 'auto'
 camera.exposure_mode = 'auto'
 camera.annotate_text_size = 20
 camera.annotate_background = True
+camera.rotation      = 180
+camera.sharpness     = 30
 
 print(f"framerate {camera.framerate}\n")
 print(f"framerate_range {camera.framerate_range}\n")
 
-print("cam initialized")
 
-# initialize display surface for use on TFT
-lcd = pygame.Surface((320,240))
-#lcd = pygame.display.set_mode((640,480),pygame.FULLSCREEN)      # pixel dimension of LCD is 320,240, OS configured to 640,480
-lcdRes = lcd.get_size()
-lcdRect = lcd.get_rect()
+# initialize display surfaces
+# lcd - LCD monitor, 1920x1080
+## testing...
+lcd = pygame.display.set_mode((1920,1080),pygame.FULLSCREEN)
+lcd.fill((255,0,0))
+pygame.display.flip()
+
+# tft - AdaFruit PiTFT, 320x240, 2.8inch, capacitive touch
+tft = pygame.Surface((320,240))
+tftRes = tft.get_size()
+tftRect = tft.get_rect()
 # frame buffer
 #frameBuffer = open("/dev/fb1","wb")
 
@@ -106,12 +114,12 @@ def getPixelsFromCoordinates(coords):
     return (coords)
 
 # touch rectangles
-width = lcdRect.width
-height = lcdRect.height
-Left  = pygame.Rect((0        , height/4)   ,(width/4, height/2) )
-Right = pygame.Rect((width*3/4, height/4)   ,(width/4, height/2) )
-Up    = pygame.Rect((width/4  , 0       )   ,(width/2, height/4) )
-Down  = pygame.Rect((width/4  , height*3/4) ,(width/2, height/4) )
+width = tftRect.width
+height = tftRect.height
+Left  = pygame.Rect( (0             , int(height/4)   ) ,(int(width/4), int(height/2) ) )
+Right = pygame.Rect( (int(width*3/4), int(height/4)   ) ,(int(width/4), int(height/2) ) )
+Up    = pygame.Rect( (int(width/4)  , 0               ) ,(int(width/2), int(height/4) ) )
+Down  = pygame.Rect( (int(width/4)  , int(height*3/4) ) ,(int(width/2), int(height/4) ) )
 
 # menu buttons and text
 EXPnum  = font.render('9999', True, WHITE)
@@ -120,10 +128,11 @@ EXPnumPos  = EXPnum.get_rect(center=(width-60,60))
 ISOnum  = font.render('9999', True, WHITE)
 ISOnumPos  = ISOnum.get_rect(center=(width-60,120))
 
+AWBtext = font.render('(Fraction(689, 256), Fraction(269, 128))', True, WHITE)
+AWBtextPos = AWBtext.get_rect(center=( int(width/2),180) )
 
 
-
-#FBuf = open("/dev/fb1","wb")
+#frameBuffer = open("/dev/fb1","wb")
 # Output to framebuffer #1
 # takes the place of pygame.display.update()
 def displayUpdate():
@@ -137,7 +146,7 @@ def displayUpdate():
     # but the surface itself provides a very handy method to convert it.
     # once converted, we write the full byte buffer of the pygame surface 
     # into the TFT screen framebuffer like we would in a plain file:
-    frameBuffer.write(lcd.convert(16,0).get_buffer())
+    frameBuffer.write(tft.convert(16,0).get_buffer())
     #frameBuffer.flush()
     # We can then close our access to the framebuffer
     # ...or we can leave it open...
@@ -147,18 +156,21 @@ def displayUpdate():
     #time.sleep(0.1)
 
 zoom = False
-zoomLevel = lcdRes[0]/cameraRes[0]/2        # ratio of LCD : camera (size of zoom box)
+zoomLevel = tftRes[0]/cameraRes[0]/magnify  # ratio of LCD : camera (size of zoom box)
 zoomX = zoomY = (1-zoomLevel)/2             # zoom box in middle
 
-##lcd.fill((0,0,0))
+##tft.fill((0,0,0))
 ##displayUpdate()
 ###camera.start_preview()
 tftOn()
 
 active = True
 while active:
-    timer.tick(20)
+    #timer.tick(20)
     
+    # touch events
+    # to view touch events:
+    #     python -m evdev.evtest
     touchEvent, nonEvent, nonEvent = select.select([touch],[], [], 0 )
     if touchEvent:
         events = touch.read()
@@ -166,22 +178,51 @@ while active:
         events = []
 
     for e in events:
-        if e.type == evdev.ecodes.EV_ABS:   # touch coordinates
+        if e.type == evdev.ecodes.EV_ABS:       # touch coordinates
             if e.code == 53:
                 X = e.value
             if e.code == 54:
                 Y = e.value
                     
         if e.type == evdev.ecodes.EV_KEY:    
-            if e.code == 330 and e.value == 1:  # touched
+            if e.code == 330 and e.value == 1:  # touch execute
+
                 # collide with buttons
-                p = getPixelsFromCoordinates((X, Y))
-                pygame.draw.circle(lcd, (255, 0, 0), p , 2, 2)
+                # e.values are pixel coordinates, no conversion required
+                pos = (X, Y)
+                #pygame.draw.circle(tft, (255, 0, 0), pos , 2, 2)
+
+                if zoom :
+                    if Left.collidepoint(pos) :
+                        zoomX -= 0.05
+                        if zoomX < 0 :
+                            zoomX = 0
+
+                    if Right.collidepoint(pos) :
+                        zoomX += 0.05
+                        if zoomX + zoomLevel > 1 :
+                            zoomX = 1 - zoomLevel
+
+                    if Up.collidepoint(pos) :
+                        zoomY -= 0.05
+                        if zoomY < 0:
+                            zoomY = 0
+
+                    if Down.collidepoint(pos) :
+                        zoomY += 0.05
+                        if zoomY + zoomLevel > 1 :
+                            zoomY = 1 - zoomLevel
+
+                    camera.zoom=(zoomX,zoomY,zoomLevel,zoomLevel)
+
              
+    # key and button events
     events = pygame.event.get()
     for e in events:
         if ( e.type == KEYUP) :
             print(f"keys: {e.key}")
+
+            # exit
             if e.key == K_q or e.key == 27:
                 # quit
                 active = False                
@@ -195,9 +236,16 @@ while active:
                     camera.zoom=(0,0,1,1)
 
             if e.key == K_w or e.key == 17:
-                timeStart = time.time()
-                camera.capture("testCapture.jpg")
-                print(f"time: {time.time() - timeStart}")
+                print(f"awb_gains: {camera.awb_gains}\n")
+                ##timeStart = time.time()
+
+                fileName = "%s/cam%s.jpg" % (os.path.expanduser('~/Pictures'), time.strftime("%Y%m%d-%H%M%S",time.localtime()) )
+
+                print(fileName)
+                camera.resolution = highRes
+                camera.capture(fileName)
+                camera.resolution = cameraRes
+                ##print(f"time: {time.time() - timeStart}")
 
             # shutter speed (the keyboard I want to use doesn't have a key pad!!... so KP7-4-1 == T-G-B and KP8-5-2 == Y-H-N 
             #if e.key == K_KP7 or e.key == K_KP1 or e.key == K_t or e.key == K_b:
@@ -219,28 +267,33 @@ while active:
                 with open('config.ini', 'w') as f:
                     config.write(f)
 
-    ##lcd.fill(BLACK)
+    ##tft.fill(BLACK)
     camera.capture(cameraBuffer, format='rgb')
     cameraImage = pygame.image.frombuffer(cameraBuffer,cameraRes, 'RGB')
-    lcd.blit(cameraImage,(0,0))
+    tft.blit(cameraImage,(0,0))
 
-    EXPnum = font.render('%d'%camera.exposure_speed, True, WHITE)
+    EXPnum = font.render('%d'%int(camera.exposure_speed/1000), True, WHITE)
     textPos = EXPnum.get_rect(center=EXPnumPos.center)
-    lcd.blit(EXPnum,textPos)
+    tft.blit(EXPnum,textPos)
 
     ISOnum = font.render('%d'%camera.iso, True, WHITE)
     textPos = ISOnum.get_rect(center=ISOnumPos.center)
-    lcd.blit(ISOnum,textPos)
+    tft.blit(ISOnum,textPos)
 
-    if camera.exposure_speed:
-        speed = int(1/camera.exposure_speed*1000000)
-    else :
-        speed = 0
-    camera.annotate_text = f"Shutter: 1/{speed} ISO: {camera.iso}"
+    AWBtext = font.render(f"{float(camera.awb_gains[0]):.3f},{float(camera.awb_gains[1]):.3f}", True, WHITE)
+    textPos = AWBtext.get_rect(center=AWBtextPos.center)
+    tft.blit(AWBtext,textPos)
+
+    #if camera.exposure_speed:
+    #    speed = int(1/camera.exposure_speed*1000000)
+    #else :
+    #    speed = 0
+    #camera.annotate_text = f"Shutter: 1/{speed} ISO: {camera.iso}"
 
     displayUpdate()
 
 tftOff()
+#frameBuffer.close()
 camera.close()
 pygame.quit()
 
