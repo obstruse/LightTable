@@ -58,16 +58,15 @@ font = pygame.font.SysFont(None,30)
 WHITE = (255,255,255)
 BLACK = (0,0,0)
 
-timer = pygame.time.Clock()
-
 # initialize camera
+
 from picamera import PiCamera
 #cameraRes = (4056,3040)
 highRes = (2048,1520)
 cameraRes = (320,240)
 camera = PiCamera(sensor_mode=0,resolution=cameraRes)
 cameraRes = camera.resolution       # the actual resolution may not be the requested resolution
-print(f"camera res: {cameraRes}\n")
+print(f"{cameraRes=}\n")
 cameraBuffer = bytearray(3*cameraRes[0]*cameraRes[1])
 
 camera.framerate_range = (20,30)    # preview minimum is 10 FPS.
@@ -80,18 +79,16 @@ camera.annotate_background = True
 camera.rotation      = 180
 camera.sharpness     = 30
 
-print(f"framerate {camera.framerate}\n")
-print(f"framerate_range {camera.framerate_range}\n")
-
+print(f"{camera.framerate=}\n")
+print(f"{camera.framerate_range=}\n")
 
 # initialize display surfaces
-# lcd - LCD monitor, 1920x1080
-## testing...
-lcd = pygame.display.set_mode((1920,1080),pygame.FULLSCREEN)
-lcd.fill((255,0,0))
-pygame.display.flip()
 
-# tft - AdaFruit PiTFT, 320x240, 2.8inch, capacitive touch
+# lcd - the LightTable - LCD monitor, 1920x1080
+lcd = pygame.display.set_mode((1920,1080),pygame.FULLSCREEN)
+pygame.mouse.set_visible(False)
+
+# tft - camera control - AdaFruit PiTFT, 320x240, 2.8inch, capacitive touch
 tft = pygame.Surface((320,240))
 tftRes = tft.get_size()
 tftRect = tft.get_rect()
@@ -99,6 +96,7 @@ tftRect = tft.get_rect()
 #frameBuffer = open("/dev/fb1","wb")
 
 # initialize touch
+
 import evdev
 touch = evdev.InputDevice('/dev/input/touchscreen')
 # We make sure the events from the touchscreen will be handled only by this program
@@ -108,10 +106,6 @@ touch.grab()
 #print(touch)
 # Even more info for curious people
 #print(touch.capabilities())
-
-# don't need this...
-def getPixelsFromCoordinates(coords):
-    return (coords)
 
 # touch rectangles
 width = tftRect.width
@@ -155,18 +149,23 @@ def displayUpdate():
     # why is there a wait here..v
     #time.sleep(0.1)
 
+def tableUpdate(tableColor):
+    lcdColor = pygame.Color(0)
+    lcdColor.hsla = (tableColor%360,100,50,100)
+    lcd.fill(lcdColor)
+    pygame.display.flip()
+
+
 zoom = False
 zoomLevel = tftRes[0]/cameraRes[0]/magnify  # ratio of LCD : camera (size of zoom box)
 zoomX = zoomY = (1-zoomLevel)/2             # zoom box in middle
 
-##tft.fill((0,0,0))
-##displayUpdate()
-###camera.start_preview()
 tftOn()
+tableColor = 0
+tableUpdate(tableColor)
 
 active = True
 while active:
-    #timer.tick(20)
     
     # touch events
     # to view touch events:
@@ -220,13 +219,35 @@ while active:
     events = pygame.event.get()
     for e in events:
         if ( e.type == KEYUP) :
-            print(f"keys: {e.key}")
 
             # exit
+            # GPIO #27 has the same value as escape
             if e.key == K_q or e.key == 27:
                 # quit
                 active = False                
 
+            # table color
+            if e.key == K_r :
+                tableColor = 0
+            if e.key == K_y :
+                tableColor = 60
+            if e.key == K_g :
+                tableColor = 120
+            if e.key == K_c :
+                tableColor = 180
+            if e.key == K_b :
+                tableColor = 240
+            if e.key == K_m :
+                tableColor = 300
+
+            if e.key == K_RIGHT :
+                tableColor += 10
+            if e.key == K_LEFT :
+                tableColor -= 10
+
+            tableUpdate(tableColor)
+
+            # zoom
             if e.key == K_z or e.key == 23:
                 zoom = not zoom
 
@@ -235,9 +256,9 @@ while active:
                 else:
                     camera.zoom=(0,0,1,1)
 
-            if e.key == K_w or e.key == 17:
+            # capture
+            if e.key == K_RETURN or e.key == 17:
                 print(f"awb_gains: {camera.awb_gains}\n")
-                ##timeStart = time.time()
 
                 fileName = "%s/cam%s.jpg" % (os.path.expanduser('~/Pictures'), time.strftime("%Y%m%d-%H%M%S",time.localtime()) )
 
@@ -245,21 +266,6 @@ while active:
                 camera.resolution = highRes
                 camera.capture(fileName)
                 camera.resolution = cameraRes
-                ##print(f"time: {time.time() - timeStart}")
-
-            # shutter speed (the keyboard I want to use doesn't have a key pad!!... so KP7-4-1 == T-G-B and KP8-5-2 == Y-H-N 
-            #if e.key == K_KP7 or e.key == K_KP1 or e.key == K_t or e.key == K_b:
-            #    if e.key == K_KP7 or e.key == K_t:
-            #        shutter += 1
-            #    else :
-            #        shutter -= 1
-            #    if shutter < 1 :
-            #        shutter = 1
-            #    if shutter > 20 :
-            #        camera.framerate = 20
-            #    else:
-            #        camera.framerate = shutter
-            #    camera.shutter_speed = int (1000000/shutter)
 
             # save settings
             if e.key == K_KP4 or e.key == K_g:
@@ -267,7 +273,6 @@ while active:
                 with open('config.ini', 'w') as f:
                     config.write(f)
 
-    ##tft.fill(BLACK)
     camera.capture(cameraBuffer, format='rgb')
     cameraImage = pygame.image.frombuffer(cameraBuffer,cameraRes, 'RGB')
     tft.blit(cameraImage,(0,0))
@@ -283,12 +288,6 @@ while active:
     AWBtext = font.render(f"{float(camera.awb_gains[0]):.3f},{float(camera.awb_gains[1]):.3f}", True, WHITE)
     textPos = AWBtext.get_rect(center=AWBtextPos.center)
     tft.blit(AWBtext,textPos)
-
-    #if camera.exposure_speed:
-    #    speed = int(1/camera.exposure_speed*1000000)
-    #else :
-    #    speed = 0
-    #camera.annotate_text = f"Shutter: 1/{speed} ISO: {camera.iso}"
 
     displayUpdate()
 
