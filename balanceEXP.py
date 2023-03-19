@@ -19,9 +19,9 @@ os.chdir(os.path.dirname(os.path.realpath(__file__)))
 # read config file
 config = ConfigParser()
 config.read('config.ini')
-shutter = config.getint('PiCamera','shutter',fallback=30)
-iso     = config.getint('PiCamera','iso',fallback=200)
-magnify = config.getint('PiCamera','magnify',fallback=4)
+exposure = config.getint('balanceEXP','exposure',fallback=10000)
+iso     = config.getint('balanceEXP','iso',fallback=200)
+magnify = config.getint('balanceEXP','magnify',fallback=4)
 
 # setup buttons
 import RPi.GPIO as GPIO
@@ -69,18 +69,24 @@ cameraRes = camera.resolution       # the actual resolution may not be the reque
 print(f"{cameraRes=}\n")
 cameraBuffer = bytearray(3*cameraRes[0]*cameraRes[1])
 
-camera.framerate_range = (20,30)    # preview minimum is 10 FPS.
-#camera.framerate = 1
+# not using preview or taking video, so don't need framerate
+camera.framerate_range = (1,30)    # preview minimum is 10 FPS.
+#camera.framerate = 20               # if framerate_range set, then framerate returns 0
 camera.iso           = iso
+#camera.iso           = 0
 camera.awb_mode      = 'auto'
-camera.exposure_mode = 'auto'
+
+camera.shutter_speed = exposure
+#camera.exposure_mode = 'auto'
+#camera.shutter_speed = 33333
+
 camera.annotate_text_size = 20
 camera.annotate_background = True
 camera.rotation      = 180
 camera.sharpness     = 30
 
 print(f"{camera.framerate=}\n")
-print(f"{camera.framerate_range=}\n")
+#print(f"{camera.framerate_range=}\n")
 
 # initialize display surfaces
 
@@ -116,10 +122,13 @@ Up    = pygame.Rect( (int(width/4)  , 0               ) ,(int(width/2), int(heig
 Down  = pygame.Rect( (int(width/4)  , int(height*3/4) ) ,(int(width/2), int(height/4) ) )
 
 # menu buttons and text
-EXPnum  = font.render('9999', True, WHITE)
+MAXnum  = font.render('9999', True, WHITE)          # maximum exposure in millisec
+MAXnumPos  = MAXnum.get_rect(center=(width-60,30))
+
+EXPnum  = font.render('9999', True, WHITE)          # exposure
 EXPnumPos  = EXPnum.get_rect(center=(width-60,60))
 
-ISOnum  = font.render('9999', True, WHITE)
+ISOnum  = font.render('9999', True, WHITE)          # ISO
 ISOnumPos  = ISOnum.get_rect(center=(width-60,120))
 
 AWBtext = font.render('(Fraction(689, 256), Fraction(269, 128))', True, WHITE)
@@ -261,8 +270,12 @@ while active:
                 print(f"awb_gains: {camera.awb_gains}\n")
 
                 fileName = "%s/cam%s.jpg" % (os.path.expanduser('~/Pictures'), time.strftime("%Y%m%d-%H%M%S",time.localtime()) )
+                fileName2 = "%s/cam%s-TFT.jpg" % (os.path.expanduser('~/Pictures'), time.strftime("%Y%m%d-%H%M%S",time.localtime()) )
+                fileName3 = "%s/cam%s-TFT-2.jpg" % (os.path.expanduser('~/Pictures'), time.strftime("%Y%m%d-%H%M%S",time.localtime()) )
 
                 print(fileName)
+                pygame.image.save(tft,fileName3)
+                camera.capture(fileName2)
                 camera.resolution = highRes
                 camera.capture(fileName)
                 camera.resolution = cameraRes
@@ -273,11 +286,12 @@ while active:
                 with open('config.ini', 'w') as f:
                     config.write(f)
 
+    camera.annotate_text = f"speed: {camera.exposure_speed} - {camera.shutter_speed}"
     camera.capture(cameraBuffer, format='rgb')
     cameraImage = pygame.image.frombuffer(cameraBuffer,cameraRes, 'RGB')
     tft.blit(cameraImage,(0,0))
 
-    EXPnum = font.render('%d'%int(camera.exposure_speed/1000), True, WHITE)
+    EXPnum = font.render(f"1/{int(1000000/camera.exposure_speed)}", True, WHITE)
     textPos = EXPnum.get_rect(center=EXPnumPos.center)
     tft.blit(EXPnum,textPos)
 
