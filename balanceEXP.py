@@ -22,6 +22,8 @@ config.read('config.ini')
 exposure = config.getint('balanceEXP','exposure',fallback=10000)
 iso     = config.getint('balanceEXP','iso',fallback=200)
 magnify = config.getint('balanceEXP','magnify',fallback=4)
+Rgain   = config.getfloat('balanceEXP','rgain',fallback=3.367)
+Bgain   = config.getfloat('balanceEXP','bgain',fallback=1.539)
 
 # setup buttons
 import RPi.GPIO as GPIO
@@ -69,12 +71,16 @@ cameraRes = camera.resolution       # the actual resolution may not be the reque
 print(f"{cameraRes=}\n")
 cameraBuffer = bytearray(3*cameraRes[0]*cameraRes[1])
 
-# not using preview or taking video, so don't need framerate
+# not using preview or taking video, so don't need framerate?
 camera.framerate_range = (1,30)    # preview minimum is 10 FPS.
 #camera.framerate = 20               # if framerate_range set, then framerate returns 0
+
 camera.iso           = iso
 #camera.iso           = 0
-camera.awb_mode      = 'auto'
+
+#camera.awb_mode      = 'auto'
+camera.awb_mode      = 'off'
+camera.awb_gains     = (Rgain,Bgain)
 
 camera.shutter_speed = exposure
 #camera.exposure_mode = 'auto'
@@ -91,7 +97,7 @@ print(f"{camera.framerate=}\n")
 # initialize display surfaces
 
 # lcd - the LightTable - LCD monitor, 1920x1080
-lcd = pygame.display.set_mode((1920,1080),pygame.FULLSCREEN)
+lcd = pygame.display.set_mode((1824,984),pygame.FULLSCREEN)
 pygame.mouse.set_visible(False)
 
 # tft - camera control - AdaFruit PiTFT, 320x240, 2.8inch, capacitive touch
@@ -274,17 +280,16 @@ while active:
                 fileName3 = "%s/cam%s-TFT-2.jpg" % (os.path.expanduser('~/Pictures'), time.strftime("%Y%m%d-%H%M%S",time.localtime()) )
 
                 print(fileName)
-                pygame.image.save(tft,fileName3)
-                camera.capture(fileName2)
+                pygame.image.save(tft,fileName2)
                 camera.resolution = highRes
                 camera.capture(fileName)
                 camera.resolution = cameraRes
 
             # save settings
-            if e.key == K_KP4 or e.key == K_g:
-                config.set('PiCamera', 'shutter', str(shutter))
-                with open('config.ini', 'w') as f:
-                    config.write(f)
+            #if e.key == K_KP4 or e.key == K_g:
+            #    config.set('PiCamera', 'shutter', str(shutter))
+            #    with open('config.ini', 'w') as f:
+            #        config.write(f)
 
     camera.annotate_text = f"speed: {camera.exposure_speed} - {camera.shutter_speed}"
     camera.capture(cameraBuffer, format='rgb')
