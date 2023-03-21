@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 import os
-#os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 os.environ['DISPLAY'] = ":0.0"
 
 import gc
@@ -11,7 +11,7 @@ import pygame
 from pygame.locals import *
 import select
 
-# config file
+# --------------- config file ---------------
 from configparser import ConfigParser
 import argparse
 # change to the python directory
@@ -25,7 +25,7 @@ magnify = config.getint('balanceEXP','magnify',fallback=4)
 Rgain   = config.getfloat('balanceEXP','rgain',fallback=3.367)
 Bgain   = config.getfloat('balanceEXP','bgain',fallback=1.539)
 
-# setup buttons
+# --------------- GPIO ---------------
 import RPi.GPIO as GPIO
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(17, GPIO.IN, pull_up_down=GPIO.PUD_UP)
@@ -33,18 +33,8 @@ GPIO.setup(22, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 GPIO.setup(23, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 GPIO.setup(27, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
-# TFT backlight
-GPIO.setwarnings(False)     # want to leave #18 OUTPUT and set to zero at end of program. It generates warning...
-GPIO.setup(18, GPIO.OUT)
-
-def tftOn():
-    GPIO.output(18,GPIO.HIGH)
-
-def tftOff():
-    GPIO.output(18,GPIO.LOW)
-
 def callback(channel):
-    print(f"callback channel {channel}")
+    #print(f"callback channel {channel}")
     pygame.event.post(pygame.event.Event(pygame.KEYUP, key=channel))
 
 GPIO.add_event_detect(17, GPIO.FALLING, callback=callback, bouncetime=300)
@@ -52,31 +42,37 @@ GPIO.add_event_detect(22, GPIO.FALLING, callback=callback, bouncetime=300)
 GPIO.add_event_detect(23, GPIO.FALLING, callback=callback, bouncetime=300)
 GPIO.add_event_detect(27, GPIO.FALLING, callback=callback, bouncetime=300)
 
-# initialize pygame display environment
+# --------------- initialize pygame display environment ---------------
 pygame.font.init()
 pygame.display.init()
-font = pygame.font.SysFont(None,30)
+font = pygame.font.SysFont(None,30)     # 'M' height is 15 pixels
 
 WHITE = (255,255,255)
 BLACK = (0,0,0)
 
-# initialize camera
+# display surfaces
+
+# lcd - the LightTable - LCD monitor, 1920x1080
+lcd = pygame.display.set_mode((0,0),pygame.FULLSCREEN)
+pygame.mouse.set_visible(False)
+
+# tft - camera control 
+tftRes = (320,240)          # - AdaFruit PiTFT, 320x240, 2.8inch, capacitive touch
+tft = pygame.Surface(tftRes)
+
+# --------------- initialize camera ---------------
 
 from picamera import PiCamera
-#cameraRes = (4056,3040)
 highRes = (2048,1520)
-cameraRes = (320,240)
+cameraRes = (tftRes)
 camera = PiCamera(sensor_mode=0,resolution=cameraRes)
 cameraRes = camera.resolution       # the actual resolution may not be the requested resolution
 print(f"{cameraRes=}\n")
 cameraBuffer = bytearray(3*cameraRes[0]*cameraRes[1])
 
-# not using preview or taking video, so don't need framerate?
-camera.framerate_range = (1,30)    # preview minimum is 10 FPS.
-#camera.framerate = 20               # if framerate_range set, then framerate returns 0
+camera.framerate_range = (1,30)    # minimum FPS determines maximum exposure time
 
 camera.iso           = iso
-#camera.iso           = 0
 
 #camera.awb_mode      = 'auto'
 camera.awb_mode      = 'off'
@@ -84,50 +80,26 @@ camera.awb_gains     = (Rgain,Bgain)
 
 camera.shutter_speed = exposure
 #camera.exposure_mode = 'auto'
-#camera.shutter_speed = 33333
 
 camera.annotate_text_size = 20
 camera.annotate_background = True
 camera.rotation      = 180
 camera.sharpness     = 30
 
-print(f"{camera.framerate=}\n")
-#print(f"{camera.framerate_range=}\n")
-
-# initialize display surfaces
-
-# lcd - the LightTable - LCD monitor, 1920x1080
-lcd = pygame.display.set_mode((1824,984),pygame.FULLSCREEN)
-pygame.mouse.set_visible(False)
-
-# tft - camera control - AdaFruit PiTFT, 320x240, 2.8inch, capacitive touch
-tft = pygame.Surface((320,240))
-tftRes = tft.get_size()
-tftRect = tft.get_rect()
-# frame buffer
-#frameBuffer = open("/dev/fb1","wb")
-
-# initialize touch
+# --------------- initialize touch ---------------
 
 import evdev
 touch = evdev.InputDevice('/dev/input/touchscreen')
-# We make sure the events from the touchscreen will be handled only by this program
-# (so the mouse pointer won't move on X when we touch the TFT screen)
-touch.grab()
-# Prints some info on how evdev sees our input device
-#print(touch)
-# Even more info for curious people
-#print(touch.capabilities())
+touch.grab()        # the touchscreen events will be handled only by this program
 
-# touch rectangles
-width = tftRect.width
-height = tftRect.height
+# TFT touch rectangles
+(width,height) = tftRes
 Left  = pygame.Rect( (0             , int(height/4)   ) ,(int(width/4), int(height/2) ) )
 Right = pygame.Rect( (int(width*3/4), int(height/4)   ) ,(int(width/4), int(height/2) ) )
 Up    = pygame.Rect( (int(width/4)  , 0               ) ,(int(width/2), int(height/4) ) )
 Down  = pygame.Rect( (int(width/4)  , int(height*3/4) ) ,(int(width/2), int(height/4) ) )
 
-# menu buttons and text
+# --------------- menu buttons and text ---------------
 MAXnum  = font.render('9999', True, WHITE)          # maximum exposure in millisec
 MAXnumPos  = MAXnum.get_rect(center=(width-60,30))
 
@@ -140,29 +112,24 @@ ISOnumPos  = ISOnum.get_rect(center=(width-60,120))
 AWBtext = font.render('(Fraction(689, 256), Fraction(269, 128))', True, WHITE)
 AWBtextPos = AWBtext.get_rect(center=( int(width/2),180) )
 
+class TFT:
+    def __init__(self):
+        self.framebuffer = open("/dev/fb1","wb")
+        # TFT backlight
+        GPIO.setwarnings(False)
+        GPIO.setup(18, GPIO.OUT)
+        GPIO.output(18,GPIO.HIGH)
 
-#frameBuffer = open("/dev/fb1","wb")
-# Output to framebuffer #1
-# takes the place of pygame.display.update()
-def displayUpdate():
-    # We open the TFT screen's framebuffer as a binary file. 
-    # Note that we will write bytes into it, hence the "wb" operator
-    ###f = open("/dev/fb1","wb")
-    # global frameBuffer
-    frameBuffer = open("/dev/fb1","wb")
-    # According to the TFT screen specs, it supports only 16bits pixels depth
-    # pygame surfaces use 24bits pixels depth by default, 
-    # but the surface itself provides a very handy method to convert it.
-    # once converted, we write the full byte buffer of the pygame surface 
-    # into the TFT screen framebuffer like we would in a plain file:
-    frameBuffer.write(tft.convert(16,0).get_buffer())
-    #frameBuffer.flush()
-    # We can then close our access to the framebuffer
-    # ...or we can leave it open...
-    # can't get it to work unless FB is opened each time, so might as well close too
-    frameBuffer.close()
-    # why is there a wait here..v
-    #time.sleep(0.1)
+    def update(self):
+        self.framebuffer.seek(0)
+        self.framebuffer.write(tft.convert(16,0).get_buffer())
+
+    def close(self):
+        self.framebuffer.close()
+        # TFT backlight
+        GPIO.output(18,GPIO.LOW)
+
+TFTdisplay = TFT()
 
 def tableUpdate(tableColor):
     lcdColor = pygame.Color(0)
@@ -170,12 +137,10 @@ def tableUpdate(tableColor):
     lcd.fill(lcdColor)
     pygame.display.flip()
 
-
 zoom = False
 zoomLevel = tftRes[0]/cameraRes[0]/magnify  # ratio of LCD : camera (size of zoom box)
 zoomX = zoomY = (1-zoomLevel)/2             # zoom box in middle
 
-tftOn()
 tableColor = 0
 tableUpdate(tableColor)
 
@@ -308,10 +273,9 @@ while active:
     textPos = AWBtext.get_rect(center=AWBtextPos.center)
     tft.blit(AWBtext,textPos)
 
-    displayUpdate()
+    TFTdisplay.update()
 
-tftOff()
-#frameBuffer.close()
+TFTdisplay.close()
 camera.close()
 pygame.quit()
 
