@@ -56,9 +56,39 @@ BLACK = (0,0,0)
 lcd = pygame.display.set_mode((0,0),pygame.FULLSCREEN)
 pygame.mouse.set_visible(False)
 
+def LCDupdate(tableColor):
+    lcdColor = pygame.Color(0)
+    lcdColor.hsla = (tableColor%360,100,50,100)
+    lcd.fill(lcdColor)
+    pygame.display.flip()
+
 # tft - camera control 
 tftRes = (320,240)          # - AdaFruit PiTFT, 320x240, 2.8inch, capacitive touch
 tft = pygame.Surface(tftRes)
+
+class TFT:
+    def __init__(self):
+        self.framebuffer = open("/dev/fb1","wb")
+        # TFT backlight
+        GPIO.setwarnings(False)
+        GPIO.setup(18, GPIO.OUT)
+        GPIO.output(18,GPIO.HIGH)
+
+    def update(self):
+        self.framebuffer.seek(0)
+        self.framebuffer.write(tft.convert(16,0).get_buffer())
+
+    def close(self):
+        self.framebuffer.close()
+        # TFT backlight
+        GPIO.output(18,GPIO.LOW)
+
+TFTdisplay = TFT()
+
+# text surface
+txtSurface = pygame.surface.Surface(tftRes)
+txtSurface.fill(BLACK)
+txtSurface.set_colorkey(BLACK)
 
 # --------------- initialize camera ---------------
 
@@ -100,6 +130,39 @@ Up    = pygame.Rect( (int(width/4)  , 0               ) ,(int(width/2), int(heig
 Down  = pygame.Rect( (int(width/4)  , int(height*3/4) ) ,(int(width/2), int(height/4) ) )
 
 # --------------- menu buttons and text ---------------
+B = {
+    "AWB":  {"row":2, "col":1, "type":"label", "value":"AWB"},
+    "Rgain":{"row":5, "col":1, "type":"output", "value":"0.0"},
+    "Bgain":{"row":7, "col":1, "type":"output", "value":"0.0"},
+    "HOLD1":{"row":12, "col":1, "type":"button", "value":"HOLD", "enabled":True, "handler":"AWBhold()"},
+    "SAVE1":{"row":15, "col":1, "type":"button", "value":"SAVE", "enabled":False, "handler":"AWBsave()"},
+
+    "EXP":  {"row":2, "col":2, "type":"label", "value":"EXP"},
+    "exposure":{"row":5, "col":2, "type":"output", "value":"1/0"},
+    "HOLD2":{"row":12, "col":2, "type":"button", "value":"HOLD", "enabled":True, "handler":"EXPhold()"},
+    "SAVE2":{"row":15, "col":2, "type":"button", "value":"SAVE", "enabled":False, "handler":"EXPsave()"},
+
+    "ISO":  {"row":2, "col":3, "type":"label", "value":"ISO"},
+    "sensitivity":{"row":5, "col":3, "type":"output", "value":"0"},
+    "ISOplus":{"row":8, "col":3, "type":"button", "value":"+", "enabled":False, "handler":"ISOplus()"},
+    "ISOminus":{"row":10, "col":3, "type":"button", "value":"-", "enabled":False, "handler":"ISOminus()"},
+    "SAVE3":{"row":15, "col":3, "type":"button", "value":"SAVE", "enabled":False, "handler":"ISOsave()"},
+    } 
+
+def TXTdisplay(key):
+    # if the line is shorter, need to clear previous box
+    pygame.draw.rect(txtSurface, BLACK, B[key].get('rect',(0,0,0,0)),0)
+
+    tempSurface = font.render(B[key].get('value',''),True,B[key].get('color',WHITE))
+    tempRect = tempSurface.get_rect()
+
+    x = width/3.0 * (B[key]['col'] - 0.5)
+    y = height/16.0 * (B[key]['row'] - 0.5)
+    
+    tempRect.center = (x,y)
+    txtSurface.blit(tempSurface, tempRect)
+    B[key]['rect'] = tempRect
+
 MAXnum  = font.render('9999', True, WHITE)          # maximum exposure in millisec
 MAXnumPos  = MAXnum.get_rect(center=(width-60,30))
 
@@ -112,37 +175,17 @@ ISOnumPos  = ISOnum.get_rect(center=(width-60,120))
 AWBtext = font.render('(Fraction(689, 256), Fraction(269, 128))', True, WHITE)
 AWBtextPos = AWBtext.get_rect(center=( int(width/2),180) )
 
-class TFT:
-    def __init__(self):
-        self.framebuffer = open("/dev/fb1","wb")
-        # TFT backlight
-        GPIO.setwarnings(False)
-        GPIO.setup(18, GPIO.OUT)
-        GPIO.output(18,GPIO.HIGH)
-
-    def update(self):
-        self.framebuffer.seek(0)
-        self.framebuffer.write(tft.convert(16,0).get_buffer())
-
-    def close(self):
-        self.framebuffer.close()
-        # TFT backlight
-        GPIO.output(18,GPIO.LOW)
-
-TFTdisplay = TFT()
-
-def tableUpdate(tableColor):
-    lcdColor = pygame.Color(0)
-    lcdColor.hsla = (tableColor%360,100,50,100)
-    lcd.fill(lcdColor)
-    pygame.display.flip()
 
 zoom = False
 zoomLevel = tftRes[0]/cameraRes[0]/magnify  # ratio of LCD : camera (size of zoom box)
 zoomX = zoomY = (1-zoomLevel)/2             # zoom box in middle
 
 tableColor = 0
-tableUpdate(tableColor)
+LCDupdate(tableColor)
+
+# display all of the objects
+for key in list(B):
+    TXTdisplay(key)
 
 active = True
 while active:
@@ -225,7 +268,7 @@ while active:
             if e.key == K_LEFT :
                 tableColor -= 10
 
-            tableUpdate(tableColor)
+            LCDupdate(tableColor)
 
             # zoom
             if e.key == K_z or e.key == 23:
@@ -273,6 +316,8 @@ while active:
     textPos = AWBtext.get_rect(center=AWBtextPos.center)
     tft.blit(AWBtext,textPos)
 
+    # add text overlay
+    tft.blit(txtSurface,(0,0))
     TFTdisplay.update()
 
 TFTdisplay.close()
