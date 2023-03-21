@@ -136,12 +136,10 @@ B = {
     "Bgain":{"row":7, "col":1, "type":"output", "value":"0.0"},
     "HOLD1":{"row":12, "col":1, "type":"button", "value":"HOLD", "enabled":True, "handler":"AWBhold()"},
     "SAVE1":{"row":15, "col":1, "type":"button", "value":"SAVE", "enabled":False, "handler":"AWBsave()"},
-
     "EXP":  {"row":2, "col":2, "type":"label", "value":"EXP"},
     "exposure":{"row":5, "col":2, "type":"output", "value":"1/0"},
     "HOLD2":{"row":12, "col":2, "type":"button", "value":"HOLD", "enabled":True, "handler":"EXPhold()"},
     "SAVE2":{"row":15, "col":2, "type":"button", "value":"SAVE", "enabled":False, "handler":"EXPsave()"},
-
     "ISO":  {"row":2, "col":3, "type":"label", "value":"ISO"},
     "sensitivity":{"row":5, "col":3, "type":"output", "value":"0"},
     "ISOplus":{"row":8, "col":3, "type":"button", "value":"+", "enabled":False, "handler":"ISOplus()"},
