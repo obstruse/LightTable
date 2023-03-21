@@ -306,13 +306,13 @@ while active:
     #EXPnum = font.render(f"1/{int(1000000/camera.exposure_speed)}", True, WHITE)
     #textPos = EXPnum.get_rect(center=EXPnumPos.center)
     #tft.blit(EXPnum,textPos)
-    B['exposure'] = f"1/{int(1000000/camera.exposure_speed)}"
+    B['exposure']['value]'] = f"1/{int(1000000/camera.exposure_speed)}"
     TXTdisplay('exposure')
 
     #ISOnum = font.render('%d'%camera.iso, True, WHITE)
     #textPos = ISOnum.get_rect(center=ISOnumPos.center)
     #tft.blit(ISOnum,textPos)
-    B['sensitivity'] = f"{camera.iso}"
+    B['sensitivity']['value'] = f"{camera.iso}"
     TXTdisplay('sensitivity')
 
     #AWBtext = font.render(f"{float(camera.awb_gains[0]):.3f},{float(camera.awb_gains[1]):.3f}", True, WHITE)
