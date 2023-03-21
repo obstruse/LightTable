@@ -172,8 +172,8 @@ EXPnumPos  = EXPnum.get_rect(center=(width-60,60))
 ISOnum  = font.render('9999', True, WHITE)          # ISO
 ISOnumPos  = ISOnum.get_rect(center=(width-60,120))
 
-AWBtext = font.render('(Fraction(689, 256), Fraction(269, 128))', True, WHITE)
-AWBtextPos = AWBtext.get_rect(center=( int(width/2),180) )
+#AWBtext = font.render('(Fraction(689, 256), Fraction(269, 128))', True, WHITE)
+#AWBtextPos = AWBtext.get_rect(center=( int(width/2),180) )
 
 
 zoom = False
@@ -312,9 +312,13 @@ while active:
     textPos = ISOnum.get_rect(center=ISOnumPos.center)
     tft.blit(ISOnum,textPos)
 
-    AWBtext = font.render(f"{float(camera.awb_gains[0]):.3f},{float(camera.awb_gains[1]):.3f}", True, WHITE)
-    textPos = AWBtext.get_rect(center=AWBtextPos.center)
-    tft.blit(AWBtext,textPos)
+    #AWBtext = font.render(f"{float(camera.awb_gains[0]):.3f},{float(camera.awb_gains[1]):.3f}", True, WHITE)
+    #textPos = AWBtext.get_rect(center=AWBtextPos.center)
+    #tft.blit(AWBtext,textPos)
+    B['Bgain']['value'] = f"{float(camera.awb_gains[1]):.3f}"
+    TXTdisplay('Bgain')
+    B['Rgain']['value'] = f"{float(camera.awb_gains[0]):.3f}"
+    TXTdisplay('Rgain')
 
     # add text overlay
     tft.blit(txtSurface,(0,0))
