@@ -163,14 +163,14 @@ def TXTdisplay(key):
     txtSurface.blit(tempSurface, tempRect)
     B[key]['rect'] = tempRect
 
-MAXnum  = font.render('9999', True, WHITE)          # maximum exposure in millisec
-MAXnumPos  = MAXnum.get_rect(center=(width-60,30))
+#MAXnum  = font.render('9999', True, WHITE)          # maximum exposure in millisec
+#MAXnumPos  = MAXnum.get_rect(center=(width-60,30))
 
-EXPnum  = font.render('9999', True, WHITE)          # exposure
-EXPnumPos  = EXPnum.get_rect(center=(width-60,60))
+#EXPnum  = font.render('9999', True, WHITE)          # exposure
+#EXPnumPos  = EXPnum.get_rect(center=(width-60,60))
 
-ISOnum  = font.render('9999', True, WHITE)          # ISO
-ISOnumPos  = ISOnum.get_rect(center=(width-60,120))
+#ISOnum  = font.render('9999', True, WHITE)          # ISO
+#ISOnumPos  = ISOnum.get_rect(center=(width-60,120))
 
 #AWBtext = font.render('(Fraction(689, 256), Fraction(269, 128))', True, WHITE)
 #AWBtextPos = AWBtext.get_rect(center=( int(width/2),180) )
@@ -299,18 +299,23 @@ while active:
             #    with open('config.ini', 'w') as f:
             #        config.write(f)
 
-    camera.annotate_text = f"speed: {camera.exposure_speed} - {camera.shutter_speed}"
+    #camera.annotate_text = f"speed: {camera.exposure_speed} - {camera.shutter_speed}"
     camera.capture(cameraBuffer, format='rgb')
     cameraImage = pygame.image.frombuffer(cameraBuffer,cameraRes, 'RGB')
     tft.blit(cameraImage,(0,0))
 
-    EXPnum = font.render(f"1/{int(1000000/camera.exposure_speed)}", True, WHITE)
-    textPos = EXPnum.get_rect(center=EXPnumPos.center)
-    tft.blit(EXPnum,textPos)
+    # update text overlay
+    #EXPnum = font.render(f"1/{int(1000000/camera.exposure_speed)}", True, WHITE)
+    #textPos = EXPnum.get_rect(center=EXPnumPos.center)
+    #tft.blit(EXPnum,textPos)
+    B['exposure'] = f"1/{int(1000000/camera.exposure_speed)}"
+    TXTdisplay('exposure')
 
-    ISOnum = font.render('%d'%camera.iso, True, WHITE)
-    textPos = ISOnum.get_rect(center=ISOnumPos.center)
-    tft.blit(ISOnum,textPos)
+    #ISOnum = font.render('%d'%camera.iso, True, WHITE)
+    #textPos = ISOnum.get_rect(center=ISOnumPos.center)
+    #tft.blit(ISOnum,textPos)
+    B['sensitivity'] = f"{camera.iso}"
+    TXTdisplay('sensitivity')
 
     #AWBtext = font.render(f"{float(camera.awb_gains[0]):.3f},{float(camera.awb_gains[1]):.3f}", True, WHITE)
     #textPos = AWBtext.get_rect(center=AWBtextPos.center)
