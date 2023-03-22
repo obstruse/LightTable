@@ -186,6 +186,7 @@ def AWBhold():
 
     if button_enabled :
         camera.awb_mode = 'off'
+        camera.awb_gains = (B['HOLD1']['Rgain'],B['HOLD1']['Bgain'])
     else:
         camera.awb_mode = 'auto'
 
