@@ -206,8 +206,8 @@ def AWBsave(key):
     (Rgain, Bgain) = camera.awb_gains
 
     # write config
-    config.set('balanceEXP', 'Rgain',f"{Rgain:.3f}")
-    config.set('balanceEXP', 'Bgain',f"{Bgain:.3f}")
+    config.set('balanceEXP', 'Rgain',f"{float(Rgain):.3f}")
+    config.set('balanceEXP', 'Bgain',f"{float(Bgain):.3f}")
     with open('config.ini', 'w') as f:
             config.write(f)
 
@@ -222,6 +222,7 @@ def EXPhold(key):
         camera.shutter_speed = saveEXP
     else:
         # float
+        camera.shutter_speed = 0
         camera.exposure_mode = 'auto'
 
     B[key]['enabled'] = button_enabled
