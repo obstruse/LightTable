@@ -135,7 +135,7 @@ B = {
     "AWB":  {"row":2, "col":1, "type":"label", "value":"AWB"},
     "Rgain":{"row":5, "col":1, "type":"output", "value":"0.0"},
     "Bgain":{"row":7, "col":1, "type":"output", "value":"0.0"},
-    "HOLD1":{"row":12, "col":1, "type":"button", "value":"HOLD", "enabled":True, "handler":"AWBhold()"},
+    "HOLD1":{"row":12, "col":1, "type":"button", "value":"HOLD", "enabled":True, "handler":"AWBhold(key)"},
     "SAVE1":{"row":15, "col":1, "type":"button", "value":"SAVE", "enabled":False, "handler":"AWBsave()"},
     
     "EXP":  {"row":2, "col":2, "type":"label", "value":"EXP"},
@@ -181,18 +181,20 @@ def TXTdisplay(key):
         B[key]['rect'] = boxRect
 
 # button handlers
-def AWBhold():
-    button_enabled = not B['HOLD1']['enabled']
+def AWBhold(key):
+    button_enabled = not B[key]['enabled']
 
     if button_enabled :
+        # hold
         saveGains = camera.awb_gains
         camera.awb_mode = 'off'
         camera.awb_gains = saveGains
     else:
+        # float
         camera.awb_mode = 'auto'
 
-    B['HOLD1']['enabled'] = button_enabled
-    TXTdisplay('HOLD1')
+    B[key]['enabled'] = button_enabled
+    TXTdisplay(key)
 
 
 zoom = False
