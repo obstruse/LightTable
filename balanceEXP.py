@@ -48,6 +48,7 @@ pygame.display.init()
 font = pygame.font.SysFont(None,30)     # 'M' height is 15 pixels
 
 WHITE = (255,255,255)
+RED   = (255,0,0)
 BLACK = (0,0,0)
 
 # display surfaces
