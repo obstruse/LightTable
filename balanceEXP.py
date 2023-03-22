@@ -145,15 +145,18 @@ B = {
     
     "ISO":  {"row":2, "col":3, "type":"label", "value":"ISO"},
     "sensitivity":{"row":5, "col":3, "type":"output", "value":"0"},
-    "ISOplus":{"row":8, "col":3, "type":"button", "value":"+", "enabled":False, "handler":"ISOplus()"},
-    "ISOminus":{"row":10, "col":3, "type":"button", "value":"-", "enabled":False, "handler":"ISOminus()"},
+    "ISOplus":{"row":9, "col":3, "type":"button", "value":"+", "enabled":False, "handler":"ISOplus()"},
+    "ISOminus":{"row":12, "col":3, "type":"button", "value":"-", "enabled":False, "handler":"ISOminus()"},
     "SAVE3":{"row":15, "col":3, "type":"button", "value":"SAVE", "enabled":False, "handler":"ISOsave()"},
     } 
+
+
 
 def TXTdisplay(key):
     # if the line is shorter, need to clear previous box
     pygame.draw.rect(txtSurface, BLACK, B[key].get('rect',(0,0,0,0)),0)
 
+    # convert row,col to x,y
     x = int(width/3.0 * (B[key]['col'] - 0.5))
     y = int(height/16.0 * (B[key]['row'] - 0.5))
 
@@ -163,9 +166,9 @@ def TXTdisplay(key):
         boxRect = pygame.Rect(0,0,int(width/3.0), int(3*height/16.0))
         boxRect.center = (x,y)
         if B[key].get('enabled',False) :
+            # draw highlighted color
             pygame.draw.rect(txtSurface,RED,boxRect,0)
         pygame.draw.rect(txtSurface,WHITE,boxRect,2) 
-            # draw highlighted color
 
     tempSurface = font.render(B[key].get('value',''),True,B[key].get('color',WHITE))
     tempRect = tempSurface.get_rect()
@@ -176,6 +179,18 @@ def TXTdisplay(key):
     if B[key].get('type','none') == 'button' :
         # the button size  (boxRect) is bigger than the text size (tempRect)
         B[key]['rect'] = boxRect
+
+# button handlers
+def AWBhold():
+    button_enabled = not B['HOLD1']['enabled']
+
+    if button_enabled :
+        camera.awb_mode = 'off'
+    else:
+        camera.awb_mode = 'auto'
+
+    B['HOLD1']['enabled'] = button_enabled
+    TXTdisplay('HOLD1')
 
 
 zoom = False
@@ -216,6 +231,7 @@ while active:
                 pos = (X, Y)
                 #pygame.draw.circle(tft, (255, 0, 0), pos , 2, 2)
 
+ 
                 if zoom :
                     if Left.collidepoint(pos) :
                         zoomX -= 0.05
@@ -238,6 +254,14 @@ while active:
                             zoomY = 1 - zoomLevel
 
                     camera.zoom=(zoomX,zoomY,zoomLevel,zoomLevel)
+                
+                else:
+                    for key in list(B) :
+                        if B[key]['type'] == 'button' and B[key]['rect'].collidepoint(pos) :
+                            eval(B[key]['handler'])
+                            break
+
+
 
              
     # key and button events
