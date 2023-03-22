@@ -104,12 +104,12 @@ camera.framerate_range = (1,30)    # minimum FPS determines maximum exposure tim
 
 camera.iso           = iso
 
-#camera.awb_mode      = 'auto'
-camera.awb_mode      = 'off'
-camera.awb_gains     = (Rgain,Bgain)
+camera.awb_mode      = 'auto'
+#camera.awb_mode      = 'off'
+#camera.awb_gains     = (Rgain,Bgain)
 
-camera.shutter_speed = exposure
-#camera.exposure_mode = 'auto'
+#camera.shutter_speed = exposure
+camera.exposure_mode = 'auto'
 
 camera.annotate_text_size = 20
 camera.annotate_background = True
@@ -136,10 +136,12 @@ B = {
     "Bgain":{"row":7, "col":1, "type":"output", "value":"0.0"},
     "HOLD1":{"row":12, "col":1, "type":"button", "value":"HOLD", "enabled":True, "handler":"AWBhold()"},
     "SAVE1":{"row":15, "col":1, "type":"button", "value":"SAVE", "enabled":False, "handler":"AWBsave()"},
+    
     "EXP":  {"row":2, "col":2, "type":"label", "value":"EXP"},
     "exposure":{"row":5, "col":2, "type":"output", "value":"1/0"},
     "HOLD2":{"row":12, "col":2, "type":"button", "value":"HOLD", "enabled":True, "handler":"EXPhold()"},
     "SAVE2":{"row":15, "col":2, "type":"button", "value":"SAVE", "enabled":False, "handler":"EXPsave()"},
+    
     "ISO":  {"row":2, "col":3, "type":"label", "value":"ISO"},
     "sensitivity":{"row":5, "col":3, "type":"output", "value":"0"},
     "ISOplus":{"row":8, "col":3, "type":"button", "value":"+", "enabled":False, "handler":"ISOplus()"},
@@ -151,27 +153,28 @@ def TXTdisplay(key):
     # if the line is shorter, need to clear previous box
     pygame.draw.rect(txtSurface, BLACK, B[key].get('rect',(0,0,0,0)),0)
 
+    x = int(width/3.0 * (B[key]['col'] - 0.5))
+    y = int(height/16.0 * (B[key]['row'] - 0.5))
+
+    # buttons have a border and a status background
+    if B[key].get('type','none') == 'button' :
+        # buttons are 1/3 the width and 3/16 of height
+        boxRect = pygame.Rect(0,0,int(width/3.0), int(3*height/16.0))
+        boxRect.center = (x,y)
+        if B[key].get('enabled',False) :
+            pygame.draw.rect(txtSurface,RED,boxRect,0)
+        pygame.draw.rect(txtSurface,WHITE,boxRect,2) 
+            # draw highlighted color
+
     tempSurface = font.render(B[key].get('value',''),True,B[key].get('color',WHITE))
     tempRect = tempSurface.get_rect()
-
-    x = width/3.0 * (B[key]['col'] - 0.5)
-    y = height/16.0 * (B[key]['row'] - 0.5)
-    
     tempRect.center = (x,y)
     txtSurface.blit(tempSurface, tempRect)
+
     B[key]['rect'] = tempRect
-
-#MAXnum  = font.render('9999', True, WHITE)          # maximum exposure in millisec
-#MAXnumPos  = MAXnum.get_rect(center=(width-60,30))
-
-#EXPnum  = font.render('9999', True, WHITE)          # exposure
-#EXPnumPos  = EXPnum.get_rect(center=(width-60,60))
-
-#ISOnum  = font.render('9999', True, WHITE)          # ISO
-#ISOnumPos  = ISOnum.get_rect(center=(width-60,120))
-
-#AWBtext = font.render('(Fraction(689, 256), Fraction(269, 128))', True, WHITE)
-#AWBtextPos = AWBtext.get_rect(center=( int(width/2),180) )
+    if B[key].get('type','none') == 'button' :
+        # the button size  (boxRect) is bigger than the text size (tempRect)
+        B[key]['rect'] = boxRect
 
 
 zoom = False
@@ -303,21 +306,13 @@ while active:
     tft.blit(cameraImage,(0,0))
 
     # update text overlay
-    #EXPnum = font.render(f"1/{int(1000000/camera.exposure_speed)}", True, WHITE)
-    #textPos = EXPnum.get_rect(center=EXPnumPos.center)
-    #tft.blit(EXPnum,textPos)
-    B['exposure']['value]'] = f"1/{int(1000000/camera.exposure_speed)}"
+
+    B['exposure']['value'] = f"1/{int(1000000/camera.exposure_speed)}"
     TXTdisplay('exposure')
 
-    #ISOnum = font.render('%d'%camera.iso, True, WHITE)
-    #textPos = ISOnum.get_rect(center=ISOnumPos.center)
-    #tft.blit(ISOnum,textPos)
     B['sensitivity']['value'] = f"{camera.iso}"
     TXTdisplay('sensitivity')
 
-    #AWBtext = font.render(f"{float(camera.awb_gains[0]):.3f},{float(camera.awb_gains[1]):.3f}", True, WHITE)
-    #textPos = AWBtext.get_rect(center=AWBtextPos.center)
-    #tft.blit(AWBtext,textPos)
     B['Bgain']['value'] = f"{float(camera.awb_gains[1]):.3f}"
     TXTdisplay('Bgain')
     B['Rgain']['value'] = f"{float(camera.awb_gains[0]):.3f}"
