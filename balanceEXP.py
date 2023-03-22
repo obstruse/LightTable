@@ -24,6 +24,7 @@ iso     = config.getint('balanceEXP','iso',fallback=200)
 magnify = config.getint('balanceEXP','magnify',fallback=4)
 Rgain   = config.getfloat('balanceEXP','rgain',fallback=3.367)
 Bgain   = config.getfloat('balanceEXP','bgain',fallback=1.539)
+saturation = config.getint('balanceEXP','saturation',fallback=20)
 
 # --------------- GPIO ---------------
 import RPi.GPIO as GPIO
@@ -51,7 +52,7 @@ WHITE = (255,255,255)
 RED   = (255,0,0)
 BLACK = (0,0,0)
 
-# display surfaces
+# --------------- display surfaces
 
 # lcd - the LightTable - LCD monitor, 1920x1080
 lcd = pygame.display.set_mode((0,0),pygame.FULLSCREEN)
@@ -117,11 +118,11 @@ camera.awb_gains     = (Rgain,Bgain)
 #camera.exposure_mode = 'auto'
 camera.shutter_speed = exposure
 
-
 camera.annotate_text_size = 20
 camera.annotate_background = True
 camera.rotation      = 180
 camera.sharpness     = 30
+camera.saturation    = saturation
 
 # --------------- initialize touch ---------------
 
@@ -201,6 +202,8 @@ def AWBhold(key):
 
     B[key]['enabled'] = button_enabled
     TXTdisplay(key)
+    TFTdisplay.blink()
+
 
 def AWBsave(key):
     (Rgain, Bgain) = camera.awb_gains
@@ -227,16 +230,45 @@ def EXPhold(key):
 
     B[key]['enabled'] = button_enabled
     TXTdisplay(key)
+    TFTdisplay.blink()
 
 def EXPsave(key):
-    exposure = camera.exposure_speed
-
     # write config
-    config.set('balanceEXP', 'exposure',f"{exposure}")
+    config.set('balanceEXP', 'exposure',f"{camera.exposure_speed}")
     with open('config.ini', 'w') as f:
             config.write(f)
 
     TFTdisplay.blink()
+
+
+def ISOplus(key):
+    iso += 100
+
+    if iso > 800 :
+        iso = 800
+    
+    camera.iso = iso
+
+    TFTdisplay.blink()
+
+def ISOminus(key):
+    iso -= 100
+    
+    if iso < 100 :
+        iso = 100
+    
+    camera.iso = iso
+
+    TFTdisplay.blink()
+
+def ISOsave(key):
+    # write config
+    config.set('balanceEXP', 'iso',f"{camera.iso}")
+    with open('config.ini', 'w') as f:
+            config.write(f)
+
+    TFTdisplay.blink()
+
 
 zoom = False
 zoomLevel = tftRes[0]/cameraRes[0]/magnify  # ratio of LCD : camera (size of zoom box)
@@ -363,6 +395,8 @@ while active:
                 camera.resolution = highRes
                 camera.capture(fileName)
                 camera.resolution = cameraRes
+                TFTdisplay.blink()
+
 
             # save settings
             #if e.key == K_KP4 or e.key == K_g:
