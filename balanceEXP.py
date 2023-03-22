@@ -79,6 +79,11 @@ class TFT:
         self.framebuffer.seek(0)
         self.framebuffer.write(tft.convert(16,0).get_buffer())
 
+    def blink(self):
+        GPIO.output(18,GPIO.LOW)
+        time.sleep(0.1)
+        GPIO.output(18,GPIO.HIGH)
+
     def close(self):
         self.framebuffer.close()
         # TFT backlight
@@ -109,8 +114,9 @@ camera.iso           = iso
 camera.awb_mode      = 'off'
 camera.awb_gains     = (Rgain,Bgain)
 
-#camera.shutter_speed = exposure
-camera.exposure_mode = 'auto'
+#camera.exposure_mode = 'auto'
+camera.shutter_speed = exposure
+
 
 camera.annotate_text_size = 20
 camera.annotate_background = True
@@ -136,18 +142,18 @@ B = {
     "Rgain":{"row":5, "col":1, "type":"output", "value":"0.0"},
     "Bgain":{"row":7, "col":1, "type":"output", "value":"0.0"},
     "HOLD1":{"row":12, "col":1, "type":"button", "value":"HOLD", "enabled":True, "handler":"AWBhold(key)"},
-    "SAVE1":{"row":15, "col":1, "type":"button", "value":"SAVE", "enabled":False, "handler":"AWBsave()"},
+    "SAVE1":{"row":15, "col":1, "type":"button", "value":"SAVE", "enabled":False, "handler":"AWBsave(key)"},
     
     "EXP":  {"row":2, "col":2, "type":"label", "value":"EXP"},
     "exposure":{"row":5, "col":2, "type":"output", "value":"1/0"},
-    "HOLD2":{"row":12, "col":2, "type":"button", "value":"HOLD", "enabled":True, "handler":"EXPhold()"},
-    "SAVE2":{"row":15, "col":2, "type":"button", "value":"SAVE", "enabled":False, "handler":"EXPsave()"},
+    "HOLD2":{"row":12, "col":2, "type":"button", "value":"HOLD", "enabled":True, "handler":"EXPhold(key)"},
+    "SAVE2":{"row":15, "col":2, "type":"button", "value":"SAVE", "enabled":False, "handler":"EXPsave(key)"},
     
     "ISO":  {"row":2, "col":3, "type":"label", "value":"ISO"},
     "sensitivity":{"row":5, "col":3, "type":"output", "value":"0"},
-    "ISOplus":{"row":9, "col":3, "type":"button", "value":"+", "enabled":False, "handler":"ISOplus()"},
-    "ISOminus":{"row":12, "col":3, "type":"button", "value":"-", "enabled":False, "handler":"ISOminus()"},
-    "SAVE3":{"row":15, "col":3, "type":"button", "value":"SAVE", "enabled":False, "handler":"ISOsave()"},
+    "ISOplus":{"row":9, "col":3, "type":"button", "value":"+", "enabled":False, "handler":"ISOplus(key)"},
+    "ISOminus":{"row":12, "col":3, "type":"button", "value":"-", "enabled":False, "handler":"ISOminus(key)"},
+    "SAVE3":{"row":15, "col":3, "type":"button", "value":"SAVE", "enabled":False, "handler":"ISOsave(key)"},
     } 
 
 
@@ -196,6 +202,40 @@ def AWBhold(key):
     B[key]['enabled'] = button_enabled
     TXTdisplay(key)
 
+def AWBsave(key):
+    (Rgain, Bgain) = camera.awb_gains
+
+    # write config
+    config.set('balanceEXP', 'Rgain',f"{Rgain:.3f}")
+    config.set('balanceEXP', 'Bgain',f"{Bgain:.3f}")
+    with open('config.ini', 'w') as f:
+            config.write(f)
+
+    TFTdisplay.blink()
+    
+def EXPhold(key):
+    button_enabled = not B[key]['enabled']
+
+    if button_enabled :
+        # hold
+        saveEXP = camera.exposure_speed
+        camera.shutter_speed = saveEXP
+    else:
+        # float
+        camera.exposure_mode = 'auto'
+
+    B[key]['enabled'] = button_enabled
+    TXTdisplay(key)
+
+def EXPsave(key):
+    exposure = camera.exposure_speed
+
+    # write config
+    config.set('balanceEXP', 'exposure',f"{exposure}")
+    with open('config.ini', 'w') as f:
+            config.write(f)
+
+    TFTdisplay.blink()
 
 zoom = False
 zoomLevel = tftRes[0]/cameraRes[0]/magnify  # ratio of LCD : camera (size of zoom box)
