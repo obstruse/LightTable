@@ -105,9 +105,9 @@ camera.framerate_range = (1,30)    # minimum FPS determines maximum exposure tim
 
 camera.iso           = iso
 
-camera.awb_mode      = 'auto'
-#camera.awb_mode      = 'off'
-#camera.awb_gains     = (Rgain,Bgain)
+#camera.awb_mode      = 'auto'
+camera.awb_mode      = 'off'
+camera.awb_gains     = (Rgain,Bgain)
 
 #camera.shutter_speed = exposure
 camera.exposure_mode = 'auto'
@@ -185,8 +185,9 @@ def AWBhold():
     button_enabled = not B['HOLD1']['enabled']
 
     if button_enabled :
+        saveGains = camera.awb_gains
         camera.awb_mode = 'off'
-        camera.awb_gains = (B['HOLD1']['Rgain'],B['HOLD1']['Bgain'])
+        camera.awb_gains = saveGains
     else:
         camera.awb_mode = 'auto'
 
