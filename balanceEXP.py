@@ -67,6 +67,7 @@ def LCDupdate(tableColor):
 # tft - camera control 
 tftRes = (320,240)          # - AdaFruit PiTFT, 320x240, 2.8inch, capacitive touch
 tft = pygame.Surface(tftRes)
+(width,height) = tftRes
 
 class TFT:
     def __init__(self):
@@ -130,12 +131,14 @@ import evdev
 touch = evdev.InputDevice('/dev/input/touchscreen')
 touch.grab()        # the touchscreen events will be handled only by this program
 
-# TFT touch rectangles
-(width,height) = tftRes
+
+# TFT zoom positioning rectangles
 Left  = pygame.Rect( (0             , int(height/4)   ) ,(int(width/4), int(height/2) ) )
 Right = pygame.Rect( (int(width*3/4), int(height/4)   ) ,(int(width/4), int(height/2) ) )
 Up    = pygame.Rect( (int(width/4)  , 0               ) ,(int(width/2), int(height/4) ) )
 Down  = pygame.Rect( (int(width/4)  , int(height*3/4) ) ,(int(width/2), int(height/4) ) )
+
+zoomMenu = pygame.Surface(tftRes)
 
 # --------------- menu buttons and text ---------------
 B = {
@@ -242,6 +245,7 @@ def EXPsave(key):
 
 
 def ISOplus(key):
+    global iso
     iso += 100
 
     if iso > 800 :
@@ -252,6 +256,7 @@ def ISOplus(key):
     TFTdisplay.blink()
 
 def ISOminus(key):
+    global iso
     iso -= 100
     
     if iso < 100 :
@@ -273,6 +278,8 @@ def ISOsave(key):
 zoom = False
 zoomLevel = tftRes[0]/cameraRes[0]/magnify  # ratio of LCD : camera (size of zoom box)
 zoomX = zoomY = (1-zoomLevel)/2             # zoom box in middle
+
+menu = True
 
 tableColor = 0
 LCDupdate(tableColor)
@@ -300,7 +307,11 @@ while active:
             if e.code == 54:
                 Y = e.value
                     
-        if e.type == evdev.ecodes.EV_KEY:    
+        if e.type == evdev.ecodes.EV_KEY:
+            # if there's no menu, then don't process touch events:
+            if not menu:
+                continue
+
             if e.code == 330 and e.value == 1:  # touch execute
 
                 # collide with buttons
@@ -382,6 +393,10 @@ while active:
                 else:
                     camera.zoom=(0,0,1,1)
 
+            # menu
+            if e.key == K_SPACE or e.key == 22:
+                menu = not menu
+
             # capture
             if e.key == K_RETURN or e.key == 17:
                 print(f"awb_gains: {camera.awb_gains}\n")
@@ -422,8 +437,15 @@ while active:
     B['Rgain']['value'] = f"{float(camera.awb_gains[0]):.3f}"
     TXTdisplay('Rgain')
 
-    # add text overlay
-    tft.blit(txtSurface,(0,0))
+    # add menu text overlay
+    if menu:
+        if zoom:
+            # add zoom menu overlay
+            tft.blit(zoomMenu,(0,0))
+        else:
+            # add main menu overlay
+            tft.blit(txtSurface,(0,0))
+
     TFTdisplay.update()
 
 TFTdisplay.close()
