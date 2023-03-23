@@ -43,6 +43,7 @@ GPIO.add_event_detect(22, GPIO.FALLING, callback=callback, bouncetime=300)
 GPIO.add_event_detect(23, GPIO.FALLING, callback=callback, bouncetime=300)
 GPIO.add_event_detect(27, GPIO.FALLING, callback=callback, bouncetime=300)
 
+
 # --------------- initialize pygame display environment ---------------
 pygame.font.init()
 pygame.display.init()
@@ -52,19 +53,13 @@ WHITE = (255,255,255)
 RED   = (255,0,0)
 BLACK = (0,0,0)
 
-# --------------- display surfaces
+# --------------- display surfaces ---------------
 
-# lcd - the LightTable - LCD monitor, 1920x1080
-lcd = pygame.display.set_mode((0,0),pygame.FULLSCREEN)
+# lcd - the LightTable 
+lcd = pygame.display.set_mode((0,0),pygame.FULLSCREEN)  # - LCD monitor, 1920x1080
 pygame.mouse.set_visible(False)
 
-def LCDupdate(tableColor):
-    lcdColor = pygame.Color(0)
-    lcdColor.hsla = (tableColor%360,100,50,100)
-    lcd.fill(lcdColor)
-    pygame.display.flip()
-
-# tft - camera control 
+# tft - camera control and preview
 tftRes = (320,240)          # - AdaFruit PiTFT, 320x240, 2.8inch, capacitive touch
 tft = pygame.Surface(tftRes)
 (width,height) = tftRes
@@ -92,11 +87,6 @@ class TFT:
         GPIO.output(18,GPIO.LOW)
 
 TFTdisplay = TFT()
-
-# text surface
-txtSurface = pygame.surface.Surface(tftRes)
-txtSurface.fill(BLACK)
-txtSurface.set_colorkey(BLACK)
 
 # --------------- initialize camera ---------------
 
@@ -131,18 +121,43 @@ import evdev
 touch = evdev.InputDevice('/dev/input/touchscreen')
 touch.grab()        # the touchscreen events will be handled only by this program
 
+# --------------- overlay surfaces ---------------
+buttonSurface = pygame.surface.Surface(tftRes)
+buttonSurface.fill(BLACK)
+buttonSurface.set_colorkey(BLACK)
 
-# TFT zoom positioning rectangles
+# zoom menu surface
+zoomSurface = pygame.Surface(tftRes)
+zoomSurface.fill(BLACK)
+zoomSurface.set_colorkey(BLACK)
+
+zoomLevel = tftRes[0]/cameraRes[0]/magnify  # ratio of LCD : camera (size of zoom box)
+zoomX = zoomY = (1-zoomLevel)/2             # zoom box in middle
+
+# --------------- menu buttons and text ---------------
+# zoom panning rectangles
 Left  = pygame.Rect( (0             , int(height/4)   ) ,(int(width/4), int(height/2) ) )
 Right = pygame.Rect( (int(width*3/4), int(height/4)   ) ,(int(width/4), int(height/2) ) )
 Up    = pygame.Rect( (int(width/4)  , 0               ) ,(int(width/2), int(height/4) ) )
 Down  = pygame.Rect( (int(width/4)  , int(height*3/4) ) ,(int(width/2), int(height/4) ) )
+Z = {
+    "Left": {"row":8, "col":1, "type":"zoom", "handler":"zoomHorizontal(0.05)"},
+    "Right":{"row":8, "col":3, "type":"zoom", "handler":"zoomHorizontal(-0.05)"},
+    "Up":   {"row":4, "col":2, "type":"zoom", "handler":"zoomVertical(0.05)"},
+    "Down": {"row":13, "col":2, "type":"zoom", "handler":"zoomVertical(-0.05)"},
+}
 
-zoomMenu = pygame.Surface(tftRes)
-zoomMenu.fill(BLACK)
-zoomMenu.set_colorkey(BLACK)
+def zoomDisplay(key):
+    # convert row,col to x,y
+    x = int(width/3.0 * (Z[key]['col'] - 0.5))
+    y = int(height/16.0 * (Z[key]['row'] - 0.5))
 
-# --------------- menu buttons and text ---------------
+    pygame.draw.circle(zoomSurface, (1,1,1), (x,y), height/6.0)
+
+    boxRect = pygame.Rect(0,0, )
+    #boxRect.center = (x,y)
+    #Z[key]['rect'] = boxRect
+
 B = {
     "AWB":  {"row":2, "col":1, "type":"label", "value":"AWB"},
     "Rgain":{"row":5, "col":1, "type":"output", "value":"0.0"},
@@ -162,21 +177,48 @@ B = {
     "SAVE3":{"row":15, "col":3, "type":"button", "value":"SAVE", "enabled":False, "handler":"ISOsave(key)"},
     } 
 
+def buttonDisplay(key):
+    # if the line is shorter, need to clear previous box
+    pygame.draw.rect(buttonSurface, BLACK, B[key].get('rect',(0,0,0,0)),0)
+
+    # convert row,col to x,y
+    x = int(width/3.0 * (B[key]['col'] - 0.5))
+    y = int(height/16.0 * (B[key]['row'] - 0.5))
+
+    # buttons have a border and a status background
+    if B[key].get('type','none') == 'button' :
+        # buttons are 1/3 the width and 3/16 of height
+        boxRect = pygame.Rect(0,0,int(width/3.0), int(3*height/16.0))
+        boxRect.center = (x,y)
+        if B[key].get('enabled',False) :
+            # draw highlighted color
+            pygame.draw.rect(buttonSurface,RED,boxRect,0)
+        pygame.draw.rect(buttonSurface,WHITE,boxRect,2) 
+
+    tempSurface = font.render(B[key].get('value',''),True,B[key].get('color',WHITE))
+    tempRect = tempSurface.get_rect()
+    tempRect.center = (x,y)
+    buttonSurface.blit(tempSurface, tempRect)
+
+    B[key]['rect'] = tempRect
+    if B[key].get('type','none') == 'button' :
+        # the button size  (boxRect) is bigger than the text size (tempRect)
+        B[key]['rect'] = boxRect
 
 
+#------------------------------------------------
+#------------------------------------------------
 def main() :
     zoom = False
-    zoomLevel = tftRes[0]/cameraRes[0]/magnify  # ratio of LCD : camera (size of zoom box)
-    zoomX = zoomY = (1-zoomLevel)/2             # zoom box in middle
-
     menu = True
-
     tableColor = 0
     LCDupdate(tableColor)
 
     # display all of the objects
     for key in list(B):
-        TXTdisplay(key)
+        buttonDisplay(key)
+    for key in list(Z):
+        zoomDisplay(key)
 
     active = True
     while active:
@@ -190,6 +232,10 @@ def main() :
             events = []
 
         for e in events:
+            # if there's no menu, empty the event queue, but ignore the events:
+            if not menu:
+                continue
+
             if e.type == evdev.ecodes.EV_ABS:       # touch coordinates
                 if e.code == 53:
                     X = e.value
@@ -197,9 +243,6 @@ def main() :
                     Y = e.value
                         
             if e.type == evdev.ecodes.EV_KEY:
-                # if there's no menu, then don't process touch events:
-                if not menu:
-                    continue
 
                 if e.code == 330 and e.value == 1:  # touch execute
 
@@ -283,8 +326,6 @@ def main() :
 
                 # capture
                 if e.key == K_RETURN or e.key == 17:
-                    print(f"awb_gains: {camera.awb_gains}\n")
-
                     fileName = "%s/cam%s.jpg" % (os.path.expanduser('~/Pictures'), time.strftime("%Y%m%d-%H%M%S",time.localtime()) )
 
                     camera.resolution = highRes
@@ -299,26 +340,23 @@ def main() :
         tft.blit(cameraImage,(0,0))
 
         # update text overlay
-
         B['exposure']['value'] = f"1/{int(1000000/camera.exposure_speed)}"
-        TXTdisplay('exposure')
-
         B['sensitivity']['value'] = f"{camera.iso}"
-        TXTdisplay('sensitivity')
-
         B['Bgain']['value'] = f"{float(camera.awb_gains[1]):.3f}"
-        TXTdisplay('Bgain')
         B['Rgain']['value'] = f"{float(camera.awb_gains[0]):.3f}"
-        TXTdisplay('Rgain')
+        
+        for key in list(B):
+            if B[key]['type'] == 'output' :
+                buttonDisplay(key)
 
         # add menu text overlay
         if menu:
             if zoom:
                 # add zoom menu overlay
-                tft.blit(zoomMenu,(0,0))
+                tft.blit(zoomSurface,(0,0))
             else:
                 # add main menu overlay
-                tft.blit(txtSurface,(0,0))
+                tft.blit(buttonSurface,(0,0))
 
         TFTdisplay.update()
 
@@ -333,34 +371,11 @@ def main() :
 
 #------------------------------------------------
 #------------------------------------------------
-
-def TXTdisplay(key):
-    # if the line is shorter, need to clear previous box
-    pygame.draw.rect(txtSurface, BLACK, B[key].get('rect',(0,0,0,0)),0)
-
-    # convert row,col to x,y
-    x = int(width/3.0 * (B[key]['col'] - 0.5))
-    y = int(height/16.0 * (B[key]['row'] - 0.5))
-
-    # buttons have a border and a status background
-    if B[key].get('type','none') == 'button' :
-        # buttons are 1/3 the width and 3/16 of height
-        boxRect = pygame.Rect(0,0,int(width/3.0), int(3*height/16.0))
-        boxRect.center = (x,y)
-        if B[key].get('enabled',False) :
-            # draw highlighted color
-            pygame.draw.rect(txtSurface,RED,boxRect,0)
-        pygame.draw.rect(txtSurface,WHITE,boxRect,2) 
-
-    tempSurface = font.render(B[key].get('value',''),True,B[key].get('color',WHITE))
-    tempRect = tempSurface.get_rect()
-    tempRect.center = (x,y)
-    txtSurface.blit(tempSurface, tempRect)
-
-    B[key]['rect'] = tempRect
-    if B[key].get('type','none') == 'button' :
-        # the button size  (boxRect) is bigger than the text size (tempRect)
-        B[key]['rect'] = boxRect
+def LCDupdate(tableColor):
+    lcdColor = pygame.Color(0)
+    lcdColor.hsla = (tableColor%360,100,50,100)
+    lcd.fill(lcdColor)
+    pygame.display.flip()
 
 
 #------------------------------------------------
@@ -378,7 +393,7 @@ def AWBhold(key):
         camera.awb_mode = 'auto'
 
     B[key]['enabled'] = button_enabled
-    TXTdisplay(key)
+    buttonDisplay(key)
     TFTdisplay.blink()
 
 
@@ -406,7 +421,7 @@ def EXPhold(key):
         camera.exposure_mode = 'auto'
 
     B[key]['enabled'] = button_enabled
-    TXTdisplay(key)
+    buttonDisplay(key)
     TFTdisplay.blink()
 
 def EXPsave(key):
