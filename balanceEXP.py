@@ -139,6 +139,8 @@ Up    = pygame.Rect( (int(width/4)  , 0               ) ,(int(width/2), int(heig
 Down  = pygame.Rect( (int(width/4)  , int(height*3/4) ) ,(int(width/2), int(height/4) ) )
 
 zoomMenu = pygame.Surface(tftRes)
+zoomMenu.fill(BLACK)
+zoomMenu.set_colorkey(BLACK)
 
 # --------------- menu buttons and text ---------------
 B = {
@@ -161,6 +163,176 @@ B = {
     } 
 
 
+
+def main() :
+    zoom = False
+    zoomLevel = tftRes[0]/cameraRes[0]/magnify  # ratio of LCD : camera (size of zoom box)
+    zoomX = zoomY = (1-zoomLevel)/2             # zoom box in middle
+
+    menu = True
+
+    tableColor = 0
+    LCDupdate(tableColor)
+
+    # display all of the objects
+    for key in list(B):
+        TXTdisplay(key)
+
+    active = True
+    while active:
+        
+        # touch events
+        # to view touch events:  python -m evdev.evtest
+        touchEvent, nonEvent, nonEvent = select.select([touch],[], [], 0 )
+        if touchEvent:
+            events = touch.read()
+        else:
+            events = []
+
+        for e in events:
+            if e.type == evdev.ecodes.EV_ABS:       # touch coordinates
+                if e.code == 53:
+                    X = e.value
+                if e.code == 54:
+                    Y = e.value
+                        
+            if e.type == evdev.ecodes.EV_KEY:
+                # if there's no menu, then don't process touch events:
+                if not menu:
+                    continue
+
+                if e.code == 330 and e.value == 1:  # touch execute
+
+                    # collide with buttons
+                    # e.values are pixel coordinates, no conversion required
+                    pos = (X, Y)
+    
+                    if zoom :
+                        if Left.collidepoint(pos) :
+                            zoomX -= 0.05
+                            if zoomX < 0 :
+                                zoomX = 0
+
+                        if Right.collidepoint(pos) :
+                            zoomX += 0.05
+                            if zoomX + zoomLevel > 1 :
+                                zoomX = 1 - zoomLevel
+
+                        if Up.collidepoint(pos) :
+                            zoomY -= 0.05
+                            if zoomY < 0:
+                                zoomY = 0
+
+                        if Down.collidepoint(pos) :
+                            zoomY += 0.05
+                            if zoomY + zoomLevel > 1 :
+                                zoomY = 1 - zoomLevel
+
+                        camera.zoom=(zoomX,zoomY,zoomLevel,zoomLevel)
+                    
+                    else:
+                        for key in list(B) :
+                            if B[key]['type'] == 'button' and B[key]['rect'].collidepoint(pos) :
+                                eval(B[key]['handler'])
+                                break
+                
+        # key and button events
+        events = pygame.event.get()
+        for e in events:
+            if ( e.type == KEYUP) :
+
+                # exit
+                # GPIO #27 has the same value as escape
+                if e.key == K_q or e.key == 27:
+                    # quit
+                    active = False                
+
+                # table color
+                if e.key == K_r :
+                    tableColor = 0
+                if e.key == K_y :
+                    tableColor = 60
+                if e.key == K_g :
+                    tableColor = 120
+                if e.key == K_c :
+                    tableColor = 180
+                if e.key == K_b :
+                    tableColor = 240
+                if e.key == K_m :
+                    tableColor = 300
+
+                if e.key == K_RIGHT :
+                    tableColor += 10
+                if e.key == K_LEFT :
+                    tableColor -= 10
+
+                LCDupdate(tableColor)
+
+                # zoom
+                if e.key == K_z or e.key == 23:
+                    zoom = not zoom
+
+                    if zoom :
+                        camera.zoom=(zoomX,zoomY,zoomLevel,zoomLevel)
+                    else:
+                        camera.zoom=(0,0,1,1)
+
+                # menu
+                if e.key == K_SPACE or e.key == 22:
+                    menu = not menu
+
+                # capture
+                if e.key == K_RETURN or e.key == 17:
+                    print(f"awb_gains: {camera.awb_gains}\n")
+
+                    fileName = "%s/cam%s.jpg" % (os.path.expanduser('~/Pictures'), time.strftime("%Y%m%d-%H%M%S",time.localtime()) )
+
+                    camera.resolution = highRes
+                    camera.capture(fileName)
+                    camera.resolution = cameraRes
+
+                    TFTdisplay.blink()
+
+        #camera.annotate_text = f"speed: {camera.exposure_speed} - {camera.shutter_speed}"
+        camera.capture(cameraBuffer, format='rgb')
+        cameraImage = pygame.image.frombuffer(cameraBuffer,cameraRes, 'RGB')
+        tft.blit(cameraImage,(0,0))
+
+        # update text overlay
+
+        B['exposure']['value'] = f"1/{int(1000000/camera.exposure_speed)}"
+        TXTdisplay('exposure')
+
+        B['sensitivity']['value'] = f"{camera.iso}"
+        TXTdisplay('sensitivity')
+
+        B['Bgain']['value'] = f"{float(camera.awb_gains[1]):.3f}"
+        TXTdisplay('Bgain')
+        B['Rgain']['value'] = f"{float(camera.awb_gains[0]):.3f}"
+        TXTdisplay('Rgain')
+
+        # add menu text overlay
+        if menu:
+            if zoom:
+                # add zoom menu overlay
+                tft.blit(zoomMenu,(0,0))
+            else:
+                # add main menu overlay
+                tft.blit(txtSurface,(0,0))
+
+        TFTdisplay.update()
+
+    TFTdisplay.close()
+    camera.close()
+    pygame.quit()
+
+    # GPIO.cleanup() sets all pins to INPUT
+    # unfortunately, when the TFT pin switches from OUTPUT to INPUT, it turns the TFT back on
+    # Since the only other pins used are all INPUT anyway, don't need/want to use this
+    #GPIO.cleanup()
+
+#------------------------------------------------
+#------------------------------------------------
 
 def TXTdisplay(key):
     # if the line is shorter, need to clear previous box
@@ -190,6 +362,8 @@ def TXTdisplay(key):
         # the button size  (boxRect) is bigger than the text size (tempRect)
         B[key]['rect'] = boxRect
 
+
+#------------------------------------------------
 # button handlers
 def AWBhold(key):
     button_enabled = not B[key]['enabled']
@@ -274,186 +448,7 @@ def ISOsave(key):
 
     TFTdisplay.blink()
 
-
-zoom = False
-zoomLevel = tftRes[0]/cameraRes[0]/magnify  # ratio of LCD : camera (size of zoom box)
-zoomX = zoomY = (1-zoomLevel)/2             # zoom box in middle
-
-menu = True
-
-tableColor = 0
-LCDupdate(tableColor)
-
-# display all of the objects
-for key in list(B):
-    TXTdisplay(key)
-
-active = True
-while active:
-    
-    # touch events
-    # to view touch events:
-    #     python -m evdev.evtest
-    touchEvent, nonEvent, nonEvent = select.select([touch],[], [], 0 )
-    if touchEvent:
-        events = touch.read()
-    else:
-        events = []
-
-    for e in events:
-        if e.type == evdev.ecodes.EV_ABS:       # touch coordinates
-            if e.code == 53:
-                X = e.value
-            if e.code == 54:
-                Y = e.value
-                    
-        if e.type == evdev.ecodes.EV_KEY:
-            # if there's no menu, then don't process touch events:
-            if not menu:
-                continue
-
-            if e.code == 330 and e.value == 1:  # touch execute
-
-                # collide with buttons
-                # e.values are pixel coordinates, no conversion required
-                pos = (X, Y)
-                #pygame.draw.circle(tft, (255, 0, 0), pos , 2, 2)
-
- 
-                if zoom :
-                    if Left.collidepoint(pos) :
-                        zoomX -= 0.05
-                        if zoomX < 0 :
-                            zoomX = 0
-
-                    if Right.collidepoint(pos) :
-                        zoomX += 0.05
-                        if zoomX + zoomLevel > 1 :
-                            zoomX = 1 - zoomLevel
-
-                    if Up.collidepoint(pos) :
-                        zoomY -= 0.05
-                        if zoomY < 0:
-                            zoomY = 0
-
-                    if Down.collidepoint(pos) :
-                        zoomY += 0.05
-                        if zoomY + zoomLevel > 1 :
-                            zoomY = 1 - zoomLevel
-
-                    camera.zoom=(zoomX,zoomY,zoomLevel,zoomLevel)
-                
-                else:
-                    for key in list(B) :
-                        if B[key]['type'] == 'button' and B[key]['rect'].collidepoint(pos) :
-                            eval(B[key]['handler'])
-                            break
-
-
-
-             
-    # key and button events
-    events = pygame.event.get()
-    for e in events:
-        if ( e.type == KEYUP) :
-
-            # exit
-            # GPIO #27 has the same value as escape
-            if e.key == K_q or e.key == 27:
-                # quit
-                active = False                
-
-            # table color
-            if e.key == K_r :
-                tableColor = 0
-            if e.key == K_y :
-                tableColor = 60
-            if e.key == K_g :
-                tableColor = 120
-            if e.key == K_c :
-                tableColor = 180
-            if e.key == K_b :
-                tableColor = 240
-            if e.key == K_m :
-                tableColor = 300
-
-            if e.key == K_RIGHT :
-                tableColor += 10
-            if e.key == K_LEFT :
-                tableColor -= 10
-
-            LCDupdate(tableColor)
-
-            # zoom
-            if e.key == K_z or e.key == 23:
-                zoom = not zoom
-
-                if zoom :
-                    camera.zoom=(zoomX,zoomY,zoomLevel,zoomLevel)
-                else:
-                    camera.zoom=(0,0,1,1)
-
-            # menu
-            if e.key == K_SPACE or e.key == 22:
-                menu = not menu
-
-            # capture
-            if e.key == K_RETURN or e.key == 17:
-                print(f"awb_gains: {camera.awb_gains}\n")
-
-                fileName = "%s/cam%s.jpg" % (os.path.expanduser('~/Pictures'), time.strftime("%Y%m%d-%H%M%S",time.localtime()) )
-                fileName2 = "%s/cam%s-TFT.jpg" % (os.path.expanduser('~/Pictures'), time.strftime("%Y%m%d-%H%M%S",time.localtime()) )
-                fileName3 = "%s/cam%s-TFT-2.jpg" % (os.path.expanduser('~/Pictures'), time.strftime("%Y%m%d-%H%M%S",time.localtime()) )
-
-                print(fileName)
-                pygame.image.save(tft,fileName2)
-                camera.resolution = highRes
-                camera.capture(fileName)
-                camera.resolution = cameraRes
-                TFTdisplay.blink()
-
-
-            # save settings
-            #if e.key == K_KP4 or e.key == K_g:
-            #    config.set('PiCamera', 'shutter', str(shutter))
-            #    with open('config.ini', 'w') as f:
-            #        config.write(f)
-
-    #camera.annotate_text = f"speed: {camera.exposure_speed} - {camera.shutter_speed}"
-    camera.capture(cameraBuffer, format='rgb')
-    cameraImage = pygame.image.frombuffer(cameraBuffer,cameraRes, 'RGB')
-    tft.blit(cameraImage,(0,0))
-
-    # update text overlay
-
-    B['exposure']['value'] = f"1/{int(1000000/camera.exposure_speed)}"
-    TXTdisplay('exposure')
-
-    B['sensitivity']['value'] = f"{camera.iso}"
-    TXTdisplay('sensitivity')
-
-    B['Bgain']['value'] = f"{float(camera.awb_gains[1]):.3f}"
-    TXTdisplay('Bgain')
-    B['Rgain']['value'] = f"{float(camera.awb_gains[0]):.3f}"
-    TXTdisplay('Rgain')
-
-    # add menu text overlay
-    if menu:
-        if zoom:
-            # add zoom menu overlay
-            tft.blit(zoomMenu,(0,0))
-        else:
-            # add main menu overlay
-            tft.blit(txtSurface,(0,0))
-
-    TFTdisplay.update()
-
-TFTdisplay.close()
-camera.close()
-pygame.quit()
-
-# GPIO.cleanup() sets all pins to INPUT
-# unfortunately, when the TFT pin switches from OUTPUT to INPUT, it turns the TFT back on
-# Since the only other pins used are all INPUT anyway, don't need/want to use this
-#GPIO.cleanup()
-
+#------------------------------------------------
+#------------------------------------------------
+if __name__ == '__main__':
+    main()
