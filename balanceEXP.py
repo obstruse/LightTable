@@ -59,9 +59,28 @@ BLACK = (0,0,0)
 lcd = pygame.display.set_mode((0,0),pygame.FULLSCREEN)  # - LCD monitor, 1920x1080
 pygame.mouse.set_visible(False)
 
+class LCD :
+    def __init__(self):
+        self.currentColor = 0
+        self.lcdColor = pygame.Color(0)
+
+    def color(self,color):
+        self.lcdColor.hsla = (color%360,100,50,100)
+        lcd.fill(self.lcdColor)
+        self.update()
+        self.currentColor = color
+
+    def incr(self,incr):
+        self.color(self.currentColor+incr)
+
+    def update(self):
+        pygame.display.flip()
+
+LCDdisplay = LCD()
+
 # tft - camera control and preview
-tftRes = (320,240)          # - AdaFruit PiTFT, 320x240, 2.8inch, capacitive touch
-tft = pygame.Surface(tftRes)
+tftRes = (320,240)          
+tft = pygame.Surface(tftRes)    # - AdaFruit PiTFT, 320x240, 2.8inch, capacitive touch
 (width,height) = tftRes
 
 class TFT:
@@ -134,13 +153,37 @@ zoomSurface.set_colorkey(BLACK)
 zoomLevel = tftRes[0]/cameraRes[0]/magnify  # ratio of LCD : camera (size of zoom box)
 zoomX = zoomY = (1-zoomLevel)/2             # zoom box in middle
 
-
 # --------------- menu buttons and text ---------------
+# keyboard stuff
+K = {
+    K_q:    {"handler":"keyQuit()","desc":"Quit program"},
+    27:     {"handler":"keyQuit()","desc":"Quit program (TFT #4)"},
+    
+    K_r:    {"handler":"LCDdisplay.color(0)","desc":"Table color Red"},
+    K_g:    {"handler":"LCDdisplay.color(120)","desc":"Table color Green"},
+    K_b:    {"handler":"LCDdisplay.color(240)","desc":"Table color Blue"},
+    K_y:    {"handler":"LCDdisplay.color(60)","desc":"Table color Yellow"},
+    K_c:    {"handler":"LCDdisplay.color(180)","desc":"Table color Cyan"},
+    K_m:    {"handler":"LCDdisplay.color(300)","desc":"Table color Magenta"},
+
+    K_RIGHT:{"handler":"LCDdisplay.incr(10)","desc":"Table color increment"},
+    K_LEFT: {"handler":"LCDdisplay.incr(-10)","desc":"Table color decrement"},
+
+    K_z:    {"handler":"","desc":"Enable/disable zoom"},
+    23:     {"handler":"","desc":"Enable/disable zoom (TFT #3)"},
+    
+    K_SPACE:{"handler":"","desc":"Enable/disable menu"},
+    22:     {"handler":"","desc":"Enable/disable menu (TFT #2)"},
+
+    K_RETURN:{"handler":"","desc":"Capture image"},
+    17:     {"handler":"","desc":"Capture image (TFT #1)"},
+}
+
+def keyQuit():
+    global active
+    active = False
+
 # zoom panning rectangles
-Left  = pygame.Rect( (0             , int(height/4)   ) ,(int(width/4), int(height/2) ) )
-Right = pygame.Rect( (int(width*3/4), int(height/4)   ) ,(int(width/4), int(height/2) ) )
-Up    = pygame.Rect( (int(width/4)  , 0               ) ,(int(width/2), int(height/4) ) )
-Down  = pygame.Rect( (int(width/4)  , int(height*3/4) ) ,(int(width/2), int(height/4) ) )
 Z = {
     "Left": {"row":8, "col":1, "type":"zoom", "handler":"zoomHorizontal(0.02)"},
     "Right":{"row":8, "col":3, "type":"zoom", "handler":"zoomHorizontal(-0.02)"},
@@ -159,22 +202,6 @@ def zoomDisplay(key):
     boxRect = pygame.Rect(0,0, int(width/3.0),int(height/3.0) )
     boxRect.center = (x,y)
     Z[key]['rect'] = boxRect
-
-def zoomHorizontal(incr):
-    global zoomX
-    zoomX += incr
-    if zoomX < 0:
-        zoomX = 0
-    if zoomX + zoomLevel > 1:
-        zoomX = 1 - zoomLevel
-
-def zoomVertical(incr):
-    global zoomY
-    zoomY += incr
-    if zoomY < 0:
-        zoomY = 0
-    if zoomY + zoomLevel > 1:
-        zoomY = 1 - zoomLevel   
 
 B = {
     "AWB":  {"row":2, "col":1, "type":"label", "value":"AWB"},
@@ -223,13 +250,22 @@ def buttonDisplay(key):
         # the button size  (boxRect) is bigger than the text size (tempRect)
         B[key]['rect'] = boxRect
 
+active = False
+zoom = False
+menu = True
+tableColor = 0
 
 #------------------------------------------------
 #------------------------------------------------
 def main() :
     global zoomX, zoomY, zoomLevel
+
+    global active, zoom, menu
+    active = False
     zoom = False
     menu = True
+
+    global tableColor
     tableColor = 0
     LCDupdate(tableColor)
 
@@ -262,7 +298,6 @@ def main() :
                     Y = e.value
                         
             if e.type == evdev.ecodes.EV_KEY:
-
                 if e.code == 330 and e.value == 1:  # touch execute
 
                     # collide with buttons
@@ -270,25 +305,6 @@ def main() :
                     pos = (X, Y)
     
                     if zoom :
-                        #if Left.collidepoint(pos) :
-                        #    zoomX -= 0.05
-                        #    if zoomX < 0 :
-                        #        zoomX = 0
-
-                        #if Right.collidepoint(pos) :
-                        #    zoomX += 0.05
-                        #    if zoomX + zoomLevel > 1 :
-                        #        zoomX = 1 - zoomLevel
-
-                        #if Up.collidepoint(pos) :
-                        #    zoomY -= 0.05
-                        #    if zoomY < 0:
-                        #        zoomY = 0
-
-                        #if Down.collidepoint(pos) :
-                        #    zoomY += 0.05
-                        #    if zoomY + zoomLevel > 1 :
-                        #        zoomY = 1 - zoomLevel
                         for key in list(Z) :
                             if Z[key]['type'] == 'zoom' and Z[key]['rect'].collidepoint(pos):
                                 eval (Z[key]['handler'])
@@ -399,6 +415,23 @@ def LCDupdate(tableColor):
     lcd.fill(lcdColor)
     pygame.display.flip()
 
+#------------------------------------------------
+# zoom handlers
+def zoomHorizontal(incr):
+    global zoomX
+    zoomX += incr
+    if zoomX < 0:
+        zoomX = 0
+    if zoomX + zoomLevel > 1:
+        zoomX = 1 - zoomLevel
+
+def zoomVertical(incr):
+    global zoomY
+    zoomY += incr
+    if zoomY < 0:
+        zoomY = 0
+    if zoomY + zoomLevel > 1:
+        zoomY = 1 - zoomLevel   
 
 #------------------------------------------------
 # button handlers
