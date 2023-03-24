@@ -131,6 +131,10 @@ zoomSurface = pygame.Surface(tftRes)
 zoomSurface.fill(BLACK)
 zoomSurface.set_colorkey(BLACK)
 
+zoomLevel = tftRes[0]/cameraRes[0]/magnify  # ratio of LCD : camera (size of zoom box)
+zoomX = zoomY = (1-zoomLevel)/2             # zoom box in middle
+
+
 # --------------- menu buttons and text ---------------
 # zoom panning rectangles
 Left  = pygame.Rect( (0             , int(height/4)   ) ,(int(width/4), int(height/2) ) )
@@ -138,10 +142,10 @@ Right = pygame.Rect( (int(width*3/4), int(height/4)   ) ,(int(width/4), int(heig
 Up    = pygame.Rect( (int(width/4)  , 0               ) ,(int(width/2), int(height/4) ) )
 Down  = pygame.Rect( (int(width/4)  , int(height*3/4) ) ,(int(width/2), int(height/4) ) )
 Z = {
-    "Left": {"row":8, "col":1, "type":"zoom", "handler":"zoomHorizontal(0.05)"},
-    "Right":{"row":8, "col":3, "type":"zoom", "handler":"zoomHorizontal(-0.05)"},
-    "Up":   {"row":4, "col":2, "type":"zoom", "handler":"zoomVertical(0.05)"},
-    "Down": {"row":13, "col":2, "type":"zoom", "handler":"zoomVertical(-0.05)"},
+    "Left": {"row":8, "col":1, "type":"zoom", "handler":"zoomHorizontal(-0.05)"},
+    "Right":{"row":8, "col":3, "type":"zoom", "handler":"zoomHorizontal(0.05)"},
+    "Up":   {"row":4, "col":2, "type":"zoom", "handler":"zoomVertical(-0.05)"},
+    "Down": {"row":13, "col":2, "type":"zoom", "handler":"zoomVertical(0.05)"},
 }
 
 def zoomDisplay(key):
@@ -151,9 +155,25 @@ def zoomDisplay(key):
 
     pygame.draw.circle(zoomSurface, (1,1,1), (x,y), int(height/6.0),1)
 
-    #boxRect = pygame.Rect(0,0, )
-    #boxRect.center = (x,y)
-    #Z[key]['rect'] = boxRect
+    boxRect = pygame.Rect(0,0, int(width/3.0),int(height/3.0) )
+    boxRect.center = (x,y)
+    Z[key]['rect'] = boxRect
+
+def zoomHorizontal(incr):
+    global zoomX
+    zoomX += incr
+    if zoomX < 0:
+        zoomX = 0
+    if zoomX + zoomLevel > 1:
+        zoomX = 1 - zoomLevel
+
+def zoomVertical(incr):
+    global zoomY
+    zoomY += incr
+    if zoomY < 0:
+        zoomY = 0
+    if zoomY + zoomLevel > 1:
+        zoomY = 1 - zoomLevel   
 
 B = {
     "AWB":  {"row":2, "col":1, "type":"label", "value":"AWB"},
@@ -206,9 +226,7 @@ def buttonDisplay(key):
 #------------------------------------------------
 #------------------------------------------------
 def main() :
-    zoomLevel = tftRes[0]/cameraRes[0]/magnify  # ratio of LCD : camera (size of zoom box)
-    zoomX = zoomY = (1-zoomLevel)/2             # zoom box in middle
-
+    global zoomX, zoomY, zoomLevel
     zoom = False
     menu = True
     tableColor = 0
@@ -251,27 +269,30 @@ def main() :
                     pos = (X, Y)
     
                     if zoom :
-                        if Left.collidepoint(pos) :
-                            zoomX -= 0.05
-                            if zoomX < 0 :
-                                zoomX = 0
+                        #if Left.collidepoint(pos) :
+                        #    zoomX -= 0.05
+                        #    if zoomX < 0 :
+                        #        zoomX = 0
 
-                        if Right.collidepoint(pos) :
-                            zoomX += 0.05
-                            if zoomX + zoomLevel > 1 :
-                                zoomX = 1 - zoomLevel
+                        #if Right.collidepoint(pos) :
+                        #    zoomX += 0.05
+                        #    if zoomX + zoomLevel > 1 :
+                        #        zoomX = 1 - zoomLevel
 
-                        if Up.collidepoint(pos) :
-                            zoomY -= 0.05
-                            if zoomY < 0:
-                                zoomY = 0
+                        #if Up.collidepoint(pos) :
+                        #    zoomY -= 0.05
+                        #    if zoomY < 0:
+                        #        zoomY = 0
 
-                        if Down.collidepoint(pos) :
-                            zoomY += 0.05
-                            if zoomY + zoomLevel > 1 :
-                                zoomY = 1 - zoomLevel
-
-                        camera.zoom=(zoomX,zoomY,zoomLevel,zoomLevel)
+                        #if Down.collidepoint(pos) :
+                        #    zoomY += 0.05
+                        #    if zoomY + zoomLevel > 1 :
+                        #        zoomY = 1 - zoomLevel
+                        for key in list(Z) :
+                            if Z[key]['type'] == 'zoom' and Z[key]['rect'].collidepoint(pos):
+                                eval (Z[key]['handler'])
+                                camera.zoom=(zoomX,zoomY,zoomLevel,zoomLevel)
+                                break
                     
                     else:
                         for key in list(B) :
