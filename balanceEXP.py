@@ -131,9 +131,6 @@ zoomSurface = pygame.Surface(tftRes)
 zoomSurface.fill(BLACK)
 zoomSurface.set_colorkey(BLACK)
 
-zoomLevel = tftRes[0]/cameraRes[0]/magnify  # ratio of LCD : camera (size of zoom box)
-zoomX = zoomY = (1-zoomLevel)/2             # zoom box in middle
-
 # --------------- menu buttons and text ---------------
 # zoom panning rectangles
 Left  = pygame.Rect( (0             , int(height/4)   ) ,(int(width/4), int(height/2) ) )
@@ -152,9 +149,9 @@ def zoomDisplay(key):
     x = int(width/3.0 * (Z[key]['col'] - 0.5))
     y = int(height/16.0 * (Z[key]['row'] - 0.5))
 
-    pygame.draw.circle(zoomSurface, (1,1,1), (x,y), height/6.0)
+    pygame.draw.circle(zoomSurface, (1,1,1), (x,y), int(height/6.0),1)
 
-    boxRect = pygame.Rect(0,0, )
+    #boxRect = pygame.Rect(0,0, )
     #boxRect.center = (x,y)
     #Z[key]['rect'] = boxRect
 
@@ -209,6 +206,9 @@ def buttonDisplay(key):
 #------------------------------------------------
 #------------------------------------------------
 def main() :
+    zoomLevel = tftRes[0]/cameraRes[0]/magnify  # ratio of LCD : camera (size of zoom box)
+    zoomX = zoomY = (1-zoomLevel)/2             # zoom box in middle
+
     zoom = False
     menu = True
     tableColor = 0
