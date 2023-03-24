@@ -142,10 +142,10 @@ Right = pygame.Rect( (int(width*3/4), int(height/4)   ) ,(int(width/4), int(heig
 Up    = pygame.Rect( (int(width/4)  , 0               ) ,(int(width/2), int(height/4) ) )
 Down  = pygame.Rect( (int(width/4)  , int(height*3/4) ) ,(int(width/2), int(height/4) ) )
 Z = {
-    "Left": {"row":8, "col":1, "type":"zoom", "handler":"zoomHorizontal(-0.05)"},
-    "Right":{"row":8, "col":3, "type":"zoom", "handler":"zoomHorizontal(0.05)"},
-    "Up":   {"row":4, "col":2, "type":"zoom", "handler":"zoomVertical(-0.05)"},
-    "Down": {"row":13, "col":2, "type":"zoom", "handler":"zoomVertical(0.05)"},
+    "Left": {"row":8, "col":1, "type":"zoom", "handler":"zoomHorizontal(0.02)"},
+    "Right":{"row":8, "col":3, "type":"zoom", "handler":"zoomHorizontal(-0.02)"},
+    "Up":   {"row":4, "col":2, "type":"zoom", "handler":"zoomVertical(0.02)"},
+    "Down": {"row":13, "col":2, "type":"zoom", "handler":"zoomVertical(-0.02)"},
 }
 
 def zoomDisplay(key):
@@ -153,6 +153,7 @@ def zoomDisplay(key):
     x = int(width/3.0 * (Z[key]['col'] - 0.5))
     y = int(height/16.0 * (Z[key]['row'] - 0.5))
 
+    pygame.draw.circle(zoomSurface, WHITE,   (x,y), int(height/6.0),2)
     pygame.draw.circle(zoomSurface, (1,1,1), (x,y), int(height/6.0),1)
 
     boxRect = pygame.Rect(0,0, int(width/3.0),int(height/3.0) )
