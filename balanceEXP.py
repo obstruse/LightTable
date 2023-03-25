@@ -47,6 +47,7 @@ GPIO.add_event_detect(27, GPIO.FALLING, callback=callback, bouncetime=300)
 # --------------- initialize pygame display environment ---------------
 pygame.font.init()
 pygame.display.init()
+pygame.mouse.set_visible(False)
 font = pygame.font.SysFont(None,30)     # 'M' height is 15 pixels
 
 WHITE = (255,255,255)
@@ -56,27 +57,25 @@ BLACK = (0,0,0)
 # --------------- display surfaces ---------------
 
 # lcd - the LightTable 
-lcd = pygame.display.set_mode((0,0),pygame.FULLSCREEN)  # - LCD monitor, 1920x1080
-pygame.mouse.set_visible(False)
 
-class LCD :
-    def __init__(self):
-        self.currentColor = 0
-        self.lcdColor = pygame.Color(0)
+class lcd :
+    surface = pygame.display.set_mode((0,0),pygame.FULLSCREEN)  # - LCD monitor, 1920x1080
+    currentColor = 0
 
-    def color(self,color):
-        self.lcdColor.hsla = (color%360,100,50,100)
-        lcd.fill(self.lcdColor)
-        self.update()
-        self.currentColor = color
+    def color(color):
+        rgb = pygame.Color(0)
+        rgb.hsla = (color%360,100,50,100)
+        lcd.surface.fill(rgb)
+        lcd.update()
+        lcd.currentColor = color
 
-    def incr(self,incr):
-        self.color(self.currentColor+incr)
+    def incr(incr):
+        lcd.color(lcd.currentColor+incr)
 
-    def update(self):
+    def update():
         pygame.display.flip()
 
-LCDdisplay = LCD()
+#LCD = LCD()
 
 # tft - camera control and preview
 tftRes = (320,240)          
@@ -159,21 +158,21 @@ K = {
     K_q:    {"handler":"keyQuit()","desc":"Quit program"},
     27:     {"handler":"keyQuit()","desc":"Quit program (TFT #4)"},
     
-    K_r:    {"handler":"LCDdisplay.color(0)","desc":"Table color Red"},
-    K_g:    {"handler":"LCDdisplay.color(120)","desc":"Table color Green"},
-    K_b:    {"handler":"LCDdisplay.color(240)","desc":"Table color Blue"},
-    K_y:    {"handler":"LCDdisplay.color(60)","desc":"Table color Yellow"},
-    K_c:    {"handler":"LCDdisplay.color(180)","desc":"Table color Cyan"},
-    K_m:    {"handler":"LCDdisplay.color(300)","desc":"Table color Magenta"},
+    K_r:    {"handler":"lcd.color(0)","desc":"Table color Red"},
+    K_g:    {"handler":"lcd.color(120)","desc":"Table color Green"},
+    K_b:    {"handler":"lcd.color(240)","desc":"Table color Blue"},
+    K_y:    {"handler":"lcd.color(60)","desc":"Table color Yellow"},
+    K_c:    {"handler":"lcd.color(180)","desc":"Table color Cyan"},
+    K_m:    {"handler":"lcd.color(300)","desc":"Table color Magenta"},
 
-    K_RIGHT:{"handler":"LCDdisplay.incr(10)","desc":"Table color increment"},
-    K_LEFT: {"handler":"LCDdisplay.incr(-10)","desc":"Table color decrement"},
+    K_RIGHT:{"handler":"lcd.incr(10)","desc":"Table color increment"},
+    K_LEFT: {"handler":"lcd.incr(-10)","desc":"Table color decrement"},
 
     K_z:    {"handler":"","desc":"Enable/disable zoom"},
     23:     {"handler":"","desc":"Enable/disable zoom (TFT #3)"},
     
-    K_SPACE:{"handler":"","desc":"Enable/disable menu"},
-    22:     {"handler":"","desc":"Enable/disable menu (TFT #2)"},
+    K_SPACE:{"handler":"keyMenu()","desc":"Enable/disable menu"},
+    22:     {"handler":"keyMenu()","desc":"Enable/disable menu (TFT #2)"},
 
     K_RETURN:{"handler":"","desc":"Capture image"},
     17:     {"handler":"","desc":"Capture image (TFT #1)"},
@@ -182,6 +181,10 @@ K = {
 def keyQuit():
     global active
     active = False
+
+def keyMenu():
+    global menu
+    menu = not menu
 
 # zoom panning rectangles
 Z = {
@@ -253,7 +256,7 @@ def buttonDisplay(key):
 active = False
 zoom = False
 menu = True
-tableColor = 0
+#tableColor = 0
 
 #------------------------------------------------
 #------------------------------------------------
@@ -265,9 +268,10 @@ def main() :
     zoom = False
     menu = True
 
-    global tableColor
-    tableColor = 0
-    LCDupdate(tableColor)
+    #global tableColor
+    #tableColor = 0
+    #LCDupdate(tableColor)
+    lcd.color(240)
 
     # display all of the objects
     for key in list(B):
@@ -326,28 +330,29 @@ def main() :
                 # GPIO #27 has the same value as escape
                 if e.key == K_q or e.key == 27:
                     # quit
-                    active = False                
+                    #active = False                
+                    keyQuit()
 
                 # table color
                 if e.key == K_r :
-                    tableColor = 0
+                    lcd.color(0)
                 if e.key == K_y :
-                    tableColor = 60
+                    lcd.color(60)
                 if e.key == K_g :
-                    tableColor = 120
+                    lcd.color(120)
                 if e.key == K_c :
-                    tableColor = 180
+                    lcd.color(180)
                 if e.key == K_b :
-                    tableColor = 240
+                    lcd.color(240)
                 if e.key == K_m :
-                    tableColor = 300
+                    lcd.color(300)
 
                 if e.key == K_RIGHT :
-                    tableColor += 10
+                    lcd.incr(10)
                 if e.key == K_LEFT :
-                    tableColor -= 10
+                    lcd.incr(-10)
 
-                LCDupdate(tableColor)
+                #LCD.color(tableColor)
 
                 # zoom
                 if e.key == K_z or e.key == 23:
@@ -360,7 +365,8 @@ def main() :
 
                 # menu
                 if e.key == K_SPACE or e.key == 22:
-                    menu = not menu
+                    #menu = not menu
+                    keyMenu()
 
                 # capture
                 if e.key == K_RETURN or e.key == 17:
@@ -409,12 +415,12 @@ def main() :
 
 #------------------------------------------------
 #------------------------------------------------
-def LCDupdate(tableColor):
-    lcdColor = pygame.Color(0)
-    lcdColor.hsla = (tableColor%360,100,50,100)
-    lcd.fill(lcdColor)
-    pygame.display.flip()
-
+#def LCDupdate(tableColor):
+#    lcdColor = pygame.Color(0)
+#    lcdColor.hsla = (tableColor%360,100,50,100)
+#    lcd.fill(lcdColor)
+#    pygame.display.flip()
+#
 #------------------------------------------------
 # zoom handlers
 def zoomHorizontal(incr):
