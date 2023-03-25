@@ -178,33 +178,6 @@ K = {
     17:     {"handler":"keyCapture()","desc":"Capture image (TFT #1)"},
 }
 
-def keyQuit():
-    global active
-    active = False
-
-def keyMenu():
-    global menu
-    menu = not menu
-
-def keyZoom():
-    global zoom
-    zoom = not zoom
-
-    if zoom :
-        camera.zoom=(zoomX,zoomY,zoomLevel,zoomLevel)
-    else:
-        camera.zoom=(0,0,1,1)
-
-def keyCapture():
-    fileName = "%s/cam%s.jpg" % (os.path.expanduser('~/Pictures'), time.strftime("%Y%m%d-%H%M%S",time.localtime()) )
-
-    camera.resolution = highRes
-    camera.capture(fileName)
-    camera.resolution = cameraRes
-
-    TFTdisplay.blink()
-
-
 
 # zoom panning rectangles
 Z = {
@@ -276,19 +249,11 @@ def buttonDisplay(key):
 active = True
 zoom = False
 menu = True
-#tableColor = 0
 
 #------------------------------------------------
 #------------------------------------------------
 def main() :
-    #global zoomX, zoomY, zoomLevel
 
-    #global zoom
-    #zoom = False
-
-    #global tableColor
-    #tableColor = 0
-    
     # tableColor
     lcd.color(240)
 
@@ -300,7 +265,7 @@ def main() :
 
     while active:
         
-        # touch events
+        # touch events (button/zoom)
         # to view touch events:  python -m evdev.evtest
         touchEvent, nonEvent, nonEvent = select.select([touch],[], [], 0 )
         if touchEvent:
@@ -309,9 +274,9 @@ def main() :
             events = []
 
         for e in events:
-            # if there's no menu, empty the event queue, but ignore the events:
+            # if there's no menu, ignore the events:
             if not menu:
-                continue
+                break
 
             if e.type == evdev.ecodes.EV_ABS:       # touch coordinates
                 if e.code == 53:
@@ -338,59 +303,14 @@ def main() :
                                 eval(B[key]['handler'])
                                 break
                 
-        # key and button events
+        # key events
         events = pygame.event.get()
         for e in events:
             if ( e.type == KEYUP) :
-
-                # exit
-                # GPIO #27 has the same value as escape
-                if e.key == K_q or e.key == 27:
-                    keyQuit()
-
-                # table color
-                if e.key == K_r :
-                    lcd.color(0)
-                if e.key == K_y :
-                    lcd.color(60)
-                if e.key == K_g :
-                    lcd.color(120)
-                if e.key == K_c :
-                    lcd.color(180)
-                if e.key == K_b :
-                    lcd.color(240)
-                if e.key == K_m :
-                    lcd.color(300)
-
-                if e.key == K_RIGHT :
-                    lcd.incr(10)
-                if e.key == K_LEFT :
-                    lcd.incr(-10)
-
-                # zoom
-                if e.key == K_z or e.key == 23:
-                    #zoom = not zoom
-                    #
-                    #if zoom :
-                    #    camera.zoom=(zoomX,zoomY,zoomLevel,zoomLevel)
-                    #else:
-                    #    camera.zoom=(0,0,1,1)
-                    keyZoom()
-
-                # menu
-                if e.key == K_SPACE or e.key == 22:
-                    keyMenu()
-
-                # capture
-                if e.key == K_RETURN or e.key == 17:
-                    #fileName = "%s/cam%s.jpg" % (os.path.expanduser('~/Pictures'), time.strftime("%Y%m%d-%H%M%S",time.localtime()) )
-                    #
-                    #camera.resolution = highRes
-                    #camera.capture(fileName)
-                    #camera.resolution = cameraRes
-                    #
-                    #TFTdisplay.blink()
-                    keyCapture()
+                for key in list(K):
+                    if K[key] == e.key:
+                        eval(K[key]['handler'])
+                        break
 
         #camera.annotate_text = f"speed: {camera.exposure_speed} - {camera.shutter_speed}"
         camera.capture(cameraBuffer, format='rgb')
@@ -429,12 +349,33 @@ def main() :
 
 #------------------------------------------------
 #------------------------------------------------
-#def LCDupdate(tableColor):
-#    lcdColor = pygame.Color(0)
-#    lcdColor.hsla = (tableColor%360,100,50,100)
-#    lcd.fill(lcdColor)
-#    pygame.display.flip()
-#
+# key handlers
+def keyQuit():
+    global active
+    active = False
+
+def keyMenu():
+    global menu
+    menu = not menu
+
+def keyZoom():
+    global zoom
+    zoom = not zoom
+
+    if zoom :
+        camera.zoom=(zoomX,zoomY,zoomLevel,zoomLevel)
+    else:
+        camera.zoom=(0,0,1,1)
+
+def keyCapture():
+    fileName = "%s/cam%s.jpg" % (os.path.expanduser('~/Pictures'), time.strftime("%Y%m%d-%H%M%S",time.localtime()) )
+
+    camera.resolution = highRes
+    camera.capture(fileName)
+    camera.resolution = cameraRes
+
+    TFTdisplay.blink()
+
 #------------------------------------------------
 # zoom handlers
 def zoomHorizontal(incr):
@@ -473,7 +414,6 @@ def AWBhold(key):
     buttonDisplay(key)
     TFTdisplay.blink()
 
-
 def AWBsave(key):
     (Rgain, Bgain) = camera.awb_gains
 
@@ -509,7 +449,6 @@ def EXPsave(key):
 
     TFTdisplay.blink()
 
-
 def ISOincr(key,incr):
     iso = camera.iso
     iso += incr
@@ -521,17 +460,6 @@ def ISOincr(key,incr):
     
     camera.iso = iso
     TFTdisplay.blink()
-
-#def ISOminus(key):
-#    iso = camera.iso
-#    iso -= 100
-#    
-#    if iso < 100 :
-#        iso = 100
-#    
-#    camera.iso = iso
-#
-#    TFTdisplay.blink()
 
 def ISOsave(key):
     # write config
