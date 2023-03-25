@@ -14,7 +14,7 @@ import select
 # --------------- config file ---------------
 from configparser import ConfigParser
 import argparse
-# change to the python directory
+# change to the program directory
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 # read config file
 config = ConfigParser()
@@ -57,7 +57,6 @@ BLACK = (0,0,0)
 # --------------- display surfaces ---------------
 
 # lcd - the LightTable 
-
 class lcd :
     surface = pygame.display.set_mode((0,0),pygame.FULLSCREEN)  # - LCD monitor, 1920x1080
     currentColor = 0
@@ -75,36 +74,31 @@ class lcd :
     def update():
         pygame.display.flip()
 
-#LCD = LCD()
-
 # tft - camera control and preview
 tftRes = (320,240)          
-tft = pygame.Surface(tftRes)    # - AdaFruit PiTFT, 320x240, 2.8inch, capacitive touch
 (width,height) = tftRes
 
-class TFT:
-    def __init__(self):
-        self.framebuffer = open("/dev/fb1","wb")
-        # TFT backlight
-        GPIO.setwarnings(False)
-        GPIO.setup(18, GPIO.OUT)
-        GPIO.output(18,GPIO.HIGH)
+class tft:
+    surface = pygame.Surface(tftRes)    # - AdaFruit PiTFT, 320x240, 2.8inch, capacitive touch
+    framebuffer = open("/dev/fb1","wb")
+    # TFT backlight
+    GPIO.setwarnings(False)
+    GPIO.setup(18, GPIO.OUT)
+    GPIO.output(18,GPIO.HIGH)
 
-    def update(self):
-        self.framebuffer.seek(0)
-        self.framebuffer.write(tft.convert(16,0).get_buffer())
+    def update():
+        tft.framebuffer.seek(0)
+        tft.framebuffer.write(tft.surface.convert(16,0).get_buffer())
 
-    def blink(self):
+    def blink():
         GPIO.output(18,GPIO.LOW)
         time.sleep(0.1)
         GPIO.output(18,GPIO.HIGH)
 
-    def close(self):
-        self.framebuffer.close()
+    def close():
+        tft.framebuffer.close()
         # TFT backlight
         GPIO.output(18,GPIO.LOW)
-
-TFTdisplay = TFT()
 
 # --------------- initialize camera ---------------
 
@@ -113,7 +107,7 @@ highRes = (2048,1520)
 cameraRes = (tftRes)
 camera = PiCamera(sensor_mode=0,resolution=cameraRes)
 cameraRes = camera.resolution       # the actual resolution may not be the requested resolution
-print(f"{cameraRes=}\n")
+print(f"camera resolution: {cameraRes}\n")
 cameraBuffer = bytearray(3*cameraRes[0]*cameraRes[1])
 
 camera.framerate_range = (1,30)    # minimum FPS determines maximum exposure time
@@ -140,6 +134,8 @@ touch = evdev.InputDevice('/dev/input/touchscreen')
 touch.grab()        # the touchscreen events will be handled only by this program
 
 # --------------- overlay surfaces ---------------
+
+# button menu surface
 buttonSurface = pygame.surface.Surface(tftRes)
 buttonSurface.fill(BLACK)
 buttonSurface.set_colorkey(BLACK)
@@ -149,10 +145,12 @@ zoomSurface = pygame.Surface(tftRes)
 zoomSurface.fill(BLACK)
 zoomSurface.set_colorkey(BLACK)
 
+# (the zoom settings)
 zoomLevel = tftRes[0]/cameraRes[0]/magnify  # ratio of LCD : camera (size of zoom box)
 zoomX = zoomY = (1-zoomLevel)/2             # zoom box in middle
 
 # --------------- menu buttons and text ---------------
+
 # keyboard stuff
 K = {
     K_q:    {"handler":"keyQuit()","desc":"Quit program"},
@@ -178,6 +176,7 @@ K = {
     17:     {"handler":"keyCapture()","desc":"Capture image (TFT #1)"},
 }
 
+# nothing to display for keys.  Maybe a help screen?
 
 # zoom panning rectangles
 Z = {
@@ -199,6 +198,7 @@ def zoomDisplay(key):
     boxRect.center = (x,y)
     Z[key]['rect'] = boxRect
 
+# TFT buttons and text
 B = {
     "AWB":  {"row":2, "col":1, "type":"label", "value":"AWB"},
     "Rgain":{"row":5, "col":1, "type":"output", "value":"0.0"},
@@ -246,6 +246,8 @@ def buttonDisplay(key):
         # the button size  (boxRect) is bigger than the text size (tempRect)
         B[key]['rect'] = boxRect
 
+#------------------------------------------------
+
 active = True
 zoom = False
 menu = True
@@ -263,10 +265,9 @@ def main() :
     for key in list(Z):
         zoomDisplay(key)
 
-    while active:
-        
+    while active:   
         # touch events (button/zoom)
-        # to view touch events:  python -m evdev.evtest
+        #      (to view touch events:  python -m evdev.evtest)
         touchEvent, nonEvent, nonEvent = select.select([touch],[], [], 0 )
         if touchEvent:
             events = touch.read()
@@ -274,7 +275,7 @@ def main() :
             events = []
 
         for e in events:
-            # if there's no menu, ignore the events:
+            # if no menu, ignore the events:
             if not menu:
                 break
 
@@ -308,16 +309,16 @@ def main() :
         for e in events:
             if ( e.type == KEYUP) :
                 for key in list(K):
-                    if K[key] == e.key:
+                    if key == e.key:
                         eval(K[key]['handler'])
                         break
 
         #camera.annotate_text = f"speed: {camera.exposure_speed} - {camera.shutter_speed}"
         camera.capture(cameraBuffer, format='rgb')
         cameraImage = pygame.image.frombuffer(cameraBuffer,cameraRes, 'RGB')
-        tft.blit(cameraImage,(0,0))
+        tft.surface.blit(cameraImage,(0,0))
 
-        # update text overlay
+        # update button menu overlay
         B['exposure']['value'] = f"1/{int(1000000/camera.exposure_speed)}"
         B['sensitivity']['value'] = f"{camera.iso}"
         B['Bgain']['value'] = f"{float(camera.awb_gains[1]):.3f}"
@@ -327,18 +328,18 @@ def main() :
             if B[key]['type'] == 'output' :
                 buttonDisplay(key)
 
-        # add menu text overlay
+        # add menu overlay
         if menu:
             if zoom:
                 # add zoom menu overlay
-                tft.blit(zoomSurface,(0,0))
+                tft.surface.blit(zoomSurface,(0,0))
             else:
-                # add main menu overlay
-                tft.blit(buttonSurface,(0,0))
+                # add button menu overlay
+                tft.surface.blit(buttonSurface,(0,0))
 
-        TFTdisplay.update()
+        tft.update()
 
-    TFTdisplay.close()
+    tft.close()
     camera.close()
     pygame.quit()
 
@@ -348,6 +349,8 @@ def main() :
     #GPIO.cleanup()
 
 #------------------------------------------------
+#------------------------------------------------
+
 #------------------------------------------------
 # key handlers
 def keyQuit():
@@ -374,7 +377,7 @@ def keyCapture():
     camera.capture(fileName)
     camera.resolution = cameraRes
 
-    TFTdisplay.blink()
+    tft.blink()
 
 #------------------------------------------------
 # zoom handlers
@@ -412,7 +415,7 @@ def AWBhold(key):
 
     B[key]['enabled'] = button_enabled
     buttonDisplay(key)
-    TFTdisplay.blink()
+    tft.blink()
 
 def AWBsave(key):
     (Rgain, Bgain) = camera.awb_gains
@@ -423,7 +426,7 @@ def AWBsave(key):
     with open('config.ini', 'w') as f:
             config.write(f)
 
-    TFTdisplay.blink()
+    tft.blink()
     
 def EXPhold(key):
     button_enabled = not B[key]['enabled']
@@ -439,7 +442,7 @@ def EXPhold(key):
 
     B[key]['enabled'] = button_enabled
     buttonDisplay(key)
-    TFTdisplay.blink()
+    tft.blink()
 
 def EXPsave(key):
     # write config
@@ -447,7 +450,7 @@ def EXPsave(key):
     with open('config.ini', 'w') as f:
             config.write(f)
 
-    TFTdisplay.blink()
+    tft.blink()
 
 def ISOincr(key,incr):
     iso = camera.iso
@@ -459,7 +462,7 @@ def ISOincr(key,incr):
         iso = 100
     
     camera.iso = iso
-    TFTdisplay.blink()
+    tft.blink()
 
 def ISOsave(key):
     # write config
@@ -467,7 +470,7 @@ def ISOsave(key):
     with open('config.ini', 'w') as f:
             config.write(f)
 
-    TFTdisplay.blink()
+    tft.blink()
 
 #------------------------------------------------
 #------------------------------------------------
