@@ -156,7 +156,7 @@ zoomX = zoomY = (1-zoomLevel)/2             # zoom box in middle
 # keyboard stuff
 K = {
     K_q:    {"handler":"keyQuit()","desc":"Quit program"},
-    27:     {"handler":"keyQuit()","desc":"Quit program (TFT #4)"},
+    27:     {"handler":"keyQuit()","desc":"Quit program (TFT #4 or Escape key)"},
     
     K_r:    {"handler":"lcd.color(0)","desc":"Table color Red"},
     K_g:    {"handler":"lcd.color(120)","desc":"Table color Green"},
@@ -168,14 +168,14 @@ K = {
     K_RIGHT:{"handler":"lcd.incr(10)","desc":"Table color increment"},
     K_LEFT: {"handler":"lcd.incr(-10)","desc":"Table color decrement"},
 
-    K_z:    {"handler":"","desc":"Enable/disable zoom"},
-    23:     {"handler":"","desc":"Enable/disable zoom (TFT #3)"},
+    K_z:    {"handler":"keyZoom()","desc":"Enable/disable zoom"},
+    23:     {"handler":"keyZoom()","desc":"Enable/disable zoom (TFT #3)"},
     
     K_SPACE:{"handler":"keyMenu()","desc":"Enable/disable menu"},
     22:     {"handler":"keyMenu()","desc":"Enable/disable menu (TFT #2)"},
 
-    K_RETURN:{"handler":"","desc":"Capture image"},
-    17:     {"handler":"","desc":"Capture image (TFT #1)"},
+    K_RETURN:{"handler":"keyCapture()","desc":"Capture image"},
+    17:     {"handler":"keyCapture()","desc":"Capture image (TFT #1)"},
 }
 
 def keyQuit():
@@ -185,6 +185,26 @@ def keyQuit():
 def keyMenu():
     global menu
     menu = not menu
+
+def keyZoom():
+    global zoom
+    zoom = not zoom
+
+    if zoom :
+        camera.zoom=(zoomX,zoomY,zoomLevel,zoomLevel)
+    else:
+        camera.zoom=(0,0,1,1)
+
+def keyCapture():
+    fileName = "%s/cam%s.jpg" % (os.path.expanduser('~/Pictures'), time.strftime("%Y%m%d-%H%M%S",time.localtime()) )
+
+    camera.resolution = highRes
+    camera.capture(fileName)
+    camera.resolution = cameraRes
+
+    TFTdisplay.blink()
+
+
 
 # zoom panning rectangles
 Z = {
@@ -220,8 +240,8 @@ B = {
     
     "ISO":  {"row":2, "col":3, "type":"label", "value":"ISO"},
     "sensitivity":{"row":5, "col":3, "type":"output", "value":"0"},
-    "ISOplus":{"row":9, "col":3, "type":"button", "value":"+", "enabled":False, "handler":"ISOplus(key)"},
-    "ISOminus":{"row":12, "col":3, "type":"button", "value":"-", "enabled":False, "handler":"ISOminus(key)"},
+    "ISOplus":{"row":9, "col":3, "type":"button", "value":"+", "enabled":False, "handler":"ISOincr(key,100)"},
+    "ISOminus":{"row":12, "col":3, "type":"button", "value":"-", "enabled":False, "handler":"ISOincr(key,-100)"},
     "SAVE3":{"row":15, "col":3, "type":"button", "value":"SAVE", "enabled":False, "handler":"ISOsave(key)"},
     } 
 
@@ -253,7 +273,7 @@ def buttonDisplay(key):
         # the button size  (boxRect) is bigger than the text size (tempRect)
         B[key]['rect'] = boxRect
 
-active = False
+active = True
 zoom = False
 menu = True
 #tableColor = 0
@@ -261,16 +281,15 @@ menu = True
 #------------------------------------------------
 #------------------------------------------------
 def main() :
-    global zoomX, zoomY, zoomLevel
+    #global zoomX, zoomY, zoomLevel
 
-    global active, zoom, menu
-    active = False
-    zoom = False
-    menu = True
+    #global zoom
+    #zoom = False
 
     #global tableColor
     #tableColor = 0
-    #LCDupdate(tableColor)
+    
+    # tableColor
     lcd.color(240)
 
     # display all of the objects
@@ -279,7 +298,6 @@ def main() :
     for key in list(Z):
         zoomDisplay(key)
 
-    active = True
     while active:
         
         # touch events
@@ -312,7 +330,6 @@ def main() :
                         for key in list(Z) :
                             if Z[key]['type'] == 'zoom' and Z[key]['rect'].collidepoint(pos):
                                 eval (Z[key]['handler'])
-                                camera.zoom=(zoomX,zoomY,zoomLevel,zoomLevel)
                                 break
                     
                     else:
@@ -329,8 +346,6 @@ def main() :
                 # exit
                 # GPIO #27 has the same value as escape
                 if e.key == K_q or e.key == 27:
-                    # quit
-                    #active = False                
                     keyQuit()
 
                 # table color
@@ -352,31 +367,30 @@ def main() :
                 if e.key == K_LEFT :
                     lcd.incr(-10)
 
-                #LCD.color(tableColor)
-
                 # zoom
                 if e.key == K_z or e.key == 23:
-                    zoom = not zoom
-
-                    if zoom :
-                        camera.zoom=(zoomX,zoomY,zoomLevel,zoomLevel)
-                    else:
-                        camera.zoom=(0,0,1,1)
+                    #zoom = not zoom
+                    #
+                    #if zoom :
+                    #    camera.zoom=(zoomX,zoomY,zoomLevel,zoomLevel)
+                    #else:
+                    #    camera.zoom=(0,0,1,1)
+                    keyZoom()
 
                 # menu
                 if e.key == K_SPACE or e.key == 22:
-                    #menu = not menu
                     keyMenu()
 
                 # capture
                 if e.key == K_RETURN or e.key == 17:
-                    fileName = "%s/cam%s.jpg" % (os.path.expanduser('~/Pictures'), time.strftime("%Y%m%d-%H%M%S",time.localtime()) )
-
-                    camera.resolution = highRes
-                    camera.capture(fileName)
-                    camera.resolution = cameraRes
-
-                    TFTdisplay.blink()
+                    #fileName = "%s/cam%s.jpg" % (os.path.expanduser('~/Pictures'), time.strftime("%Y%m%d-%H%M%S",time.localtime()) )
+                    #
+                    #camera.resolution = highRes
+                    #camera.capture(fileName)
+                    #camera.resolution = cameraRes
+                    #
+                    #TFTdisplay.blink()
+                    keyCapture()
 
         #camera.annotate_text = f"speed: {camera.exposure_speed} - {camera.shutter_speed}"
         camera.capture(cameraBuffer, format='rgb')
@@ -430,6 +444,7 @@ def zoomHorizontal(incr):
         zoomX = 0
     if zoomX + zoomLevel > 1:
         zoomX = 1 - zoomLevel
+    camera.zoom=(zoomX,zoomY,zoomLevel,zoomLevel)
 
 def zoomVertical(incr):
     global zoomY
@@ -438,6 +453,7 @@ def zoomVertical(incr):
         zoomY = 0
     if zoomY + zoomLevel > 1:
         zoomY = 1 - zoomLevel   
+    camera.zoom=(zoomX,zoomY,zoomLevel,zoomLevel)
 
 #------------------------------------------------
 # button handlers
@@ -494,27 +510,28 @@ def EXPsave(key):
     TFTdisplay.blink()
 
 
-def ISOplus(key):
-    global iso
-    iso += 100
+def ISOincr(key,incr):
+    iso = camera.iso
+    iso += incr
 
     if iso > 800 :
         iso = 800
-    
-    camera.iso = iso
-
-    TFTdisplay.blink()
-
-def ISOminus(key):
-    global iso
-    iso -= 100
-    
     if iso < 100 :
         iso = 100
     
     camera.iso = iso
-
     TFTdisplay.blink()
+
+#def ISOminus(key):
+#    iso = camera.iso
+#    iso -= 100
+#    
+#    if iso < 100 :
+#        iso = 100
+#    
+#    camera.iso = iso
+#
+#    TFTdisplay.blink()
 
 def ISOsave(key):
     # write config
