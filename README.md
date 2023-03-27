@@ -10,15 +10,62 @@
 - Raspberry Pi 3
 - PiTFT 320x240 display
 
+  ![](images/camera-33.png)
 ## Software
+- LCD LightTable keyboard commands:
 
+Key | Description
+-|-
+q | Quit program
+ESCAPE | Quit program
+TFT #4 | Quit program
+|    
+r | Table color Red
+g | Table color Green
+b | Table color Blue
+y | Table color Yellow
+c | Table color Cyan
+m | Table color Magenta
+|
+RIGHT | Table color increment
+LEFT | Table color decrement
+|
+z | Enable/disable zoom
+TFT #3 | Enable/disable zoom
+|    
+SPACE | Enable/disable menu
+TFT #2 | Enable/disable menu
+|
+RETURN | Capture image
+TFT #1 | Capture image
+
+![](images/tens.jpg)
+
+- TFT Display commands:
+
+![](images/cam20230326-194558.jpg)
+
+---
 ## Workflow
-### White Balance
-### Exposure
-### Focus
+- White Balance
+- Exposure
+- Focus
+
+  ![](images/focus50-small.png)
+
+Larger version here: [Focus 50% Gray](images/focus50.png)
+
 ### Preview
 ### Capture
 ### Edit
+
+![](images/tens-red2.png)
+
+
+
+
+
+
 
 
 
