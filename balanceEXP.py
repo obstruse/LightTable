@@ -52,6 +52,8 @@ font = pygame.font.SysFont(None,30)     # 'M' height is 15 pixels
 
 WHITE = (255,255,255)
 RED   = (255,0,0)
+GREEN = (0,255,0)
+BLUE  = (0,0,255)
 BLACK = (0,0,0)
 
 # --------------- display surfaces ---------------
@@ -60,6 +62,10 @@ BLACK = (0,0,0)
 class lcd :
     surface = pygame.display.set_mode((0,0),pygame.FULLSCREEN)  # - LCD monitor, 1920x1080
     currentColor = 0
+
+    def white():
+        lcd.surface.fill(WHITE)
+        lcd.update()
 
     def color(color):
         rgb = pygame.Color(0)
@@ -70,6 +76,13 @@ class lcd :
 
     def incr(incr):
         lcd.color(lcd.currentColor+incr)
+
+    def on():
+        lcd.color(lcd.currentColor)
+
+    def off():
+        lcd.surface.fill(BLACK)
+        lcd.update()
 
     def update():
         pygame.display.flip()
@@ -162,6 +175,7 @@ K = {
     K_y:    {"handler":"lcd.color(60)","desc":"Table color Yellow"},
     K_c:    {"handler":"lcd.color(180)","desc":"Table color Cyan"},
     K_m:    {"handler":"lcd.color(300)","desc":"Table color Magenta"},
+    K_w:    {"handler":"lcd.white()","desc":"Table color White"},
 
     K_RIGHT:{"handler":"lcd.incr(10)","desc":"Table color increment"},
     K_LEFT: {"handler":"lcd.incr(-10)","desc":"Table color decrement"},
@@ -371,10 +385,17 @@ def keyZoom():
         camera.zoom=(0,0,1,1)
 
 def keyCapture():
-    fileName = "%s/cam%s.jpg" % (os.path.expanduser('~/Pictures'), time.strftime("%Y%m%d-%H%M%S",time.localtime()) )
+    #fileName = "%s/cam%s.jpg" % (os.path.expanduser('~/Pictures'), time.strftime("%Y%m%d-%H%M%S",time.localtime()) )
+    pathName = os.path.expanduser('~/Pictures')
+    timeStamp= time.strftime("%Y%m%d-%H%M%S",time.localtime())
 
     camera.resolution = highRes
-    camera.capture(fileName)
+
+    lcd.off()
+    camera.capture(f"{pathName}/cam{timeStamp}.jpg")
+    lcd.on()
+    camera.capture(f"{pathName}/cam{timeStamp}-mask.jpg")
+
     camera.resolution = cameraRes
 
     tft.blink()
