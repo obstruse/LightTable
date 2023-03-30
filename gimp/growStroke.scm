@@ -1,4 +1,4 @@
-(define (script-fu-grow-stroke inImage inDrawable inGrowth inColor inLoop inWidth inDirname) 
+(define (script-fu-grow-stroke inImage inDrawable inGrowth inColor inLoop inWidth ) 
     (let* (
            (theImage inImage)
            (theDrawable inDrawable)
@@ -6,8 +6,8 @@
            (theColor inColor)
            (theLoop inLoop)
            (theWidth inWidth)
-           (theDirname inDirname)
-           (fileName "")
+           ;(theDirname inDirname)
+           ;(fileName "")
            )
       (gimp-image-undo-group-start theImage)
 
@@ -18,11 +18,10 @@
 
       (while (> theLoop 0)
           ;(gimp-message (number->string theLoop))
-          ;(gimp-context-set-line-width theLoop)
           ;(gimp-message (number->string(car (gimp-context-get-line-width))))
           (gimp-selection-grow theImage theGrowth)
           (gimp-drawable-edit-stroke-selection theDrawable)
-          (set! fileName (string-append theDirname "/growth-" (number->string ( + 100 theLoop)) ".png" ))
+          ;(set! fileName (string-append theDirname "/growth-" (number->string ( + 100 theLoop)) ".png" ))
           ;(file-png-save 1 theImage theDrawable fileName fileName 0 9 0 0 0 0 0)
           (set! theLoop (- theLoop 1))
       )
@@ -48,8 +47,8 @@
   SF-COLOR       "Color"       '(255 255 255)
   SF-ADJUSTMENT  "Loop"        '(1 1 100 1 1 0 0)
   SF-ADJUSTMENT  "Width"       '(1 1 100 1 1 0 0)
-  SF-DIRNAME     "Directory for save" "./"
+  ;SF-DIRNAME     "Directory for save" "./"
 )
 
-(script-fu-menu-register "script-fu-grow-stroke" "<Image>/Filters/Script-Fu")
+(script-fu-menu-register "script-fu-grow-stroke" "<Image>/Filters")
 
