@@ -3,6 +3,7 @@
 ![](images/grr-66.png)
 ![](images/troll-25.png)
 
+Python script to create a backgroound mask for table top photography, using an LCD monitor as a light table.
 ---
 ## Setup
 - LCD monitor mounted horizontally
@@ -71,7 +72,7 @@ Button | Description
 
 ### TFT Zoom
 - Press 'z' on keyboard, or TFT #3 to enter zoom mode
-- Zoom magnification is determined by config.ini key 'magnify'. Default is 4X
+- Zoom magnification is determined by `config.ini` key 'magnify'. Default is 4X
 - If menu is enabled, four circles will appear to move the zoom window
 
 ![](images/TFTzoom.png)
@@ -104,7 +105,10 @@ saturation | image saturation | 20
 - SAVE the AWB to config.ini
 ### Focus
 - Place the focus target on the LCD. Raise the target to approximately the height of the object.
-- Open camera iris, adjust focus.  Lock focus.
+- Open camera aperature to maximum.
+- Enter zoom mode (key 'z' or TFT #3)  Move the zoom window using the TFT circles.
+- Adjust focus.  
+- Lock focus.
   |![](images/focus50-small.png)|
   |:-:|
   |Focus Target|
@@ -112,8 +116,20 @@ saturation | image saturation | 20
 
 ### Exposure
 
-- Preview
-- Capture
+- Set the aperature an f-stop or two below maximum opening (around f2.8 on the 16mm lens).  This will improve the depth of field, and allow for adjustments in the final preview.
+- Use Focus Target to adjust exposure.  The 50% Gray of the target seems to work well with the HQ camera auto exposure.
+- Release HOLD on EXP
+- Adjust ISO to get an exposure time between 1/100 and 1/30 (approximately).
+- SAVE the ISO to `config.ini`
+- Set HOLD on EXP
+- SAVE the EXP to `config.ini`
+
+### Capture
+- Select a color for the LCD light table that contrasts with the Object.
+- Color can be selected with a key: **r,g,b,y,c,m** or by rotating the color wheel **LEFT,RIGHT**
+- **BLUE** works well and **RED** works, but anything that includes **GREEN** is junk.
+- Make small adjustments to the aperature as desired
+- Capture (key: **ENTER**)  You can also press TFT #1, but this can cause camera wobble leading to blurring...
 ### Edit
 - Open background image in gimp
 - Open 'as Layers...' mask image
