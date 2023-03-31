@@ -1,16 +1,29 @@
 # LCD LightTable
 ![](images/hmm-25.png)
 ![](images/grr-66.png)
-![](images/troll-25.png)
 
-Python script to create a backgroound mask for table top photography, using an LCD monitor as a light table.
+
+---
+Table Top Photograpy with Background Removal,  using an LCD monitor as a Light Table.
+Raspberry Pi HQ camera, Python, and Gimp.
+
+---
+
+Photographed against Red Table Top...
+
+![](images/gs-1-2.png)
+
+Red Table TopRed selected and removed
+
+![](images/ms-1-2.png)
+
 ---
 ## Setup
 - LCD monitor mounted horizontally
-- PiTFT 320x240 display
 - Raspberry Pi HQ camera mounted approximately 80cm above monitor
 - 16mm lens
 - Raspberry Pi 3
+- PiTFT 320x240 display
 
 
   ![](images/camera-33.png)
@@ -130,17 +143,21 @@ saturation | image saturation | 20
 - **BLUE** works well and **RED** works, but anything that includes **GREEN** is junk.
 - Make small adjustments to the aperature as desired
 - Capture (key: **ENTER**)  You can also press TFT #1, but this can cause camera wobble leading to blurring...
+- Two images are captured:  a mask image, taken with the table light on, and a foreground image, taken with the table light off.
 ### Edit
-- Open background image in gimp
-- Open 'as Layers...' mask image
-- Select the mask layer, Add Alpha Channel ( Layer | Transparency | Add Alpha Channel )
-- Select mask background color ( Select | By Color ).  Adjust Threshold as needed (e.g. 16)
-- Invert the selection ( Select | Invert ) The object is now selected.
-- Delete the selection.  The object on the top mask layer (which has reflections from the table color) is removed revealing the object below (taken when the table light was off)
-- Invert the selection ( Select | Invert ) The mask background is now selected.
+- Open the foreground image in gimp
+- Open 'as Layers...' the mask image
+- Select the mask layer, then **Add Alpha Channel** _( Layer | Transparency | Add Alpha Channel )_
+- Select the mask layer background by color _( Select | By Color )_.  Adjust Threshold as needed (e.g. 16)
+- Invert the selection _( Select | Invert )_ Everything that isn't background is now selected.
+- Delete the selection.  This removes the object from the mask layer (which had reflections from the table light) and reveals the foreground object below (taken when the table light was off)
+- Invert the selection _( Select | Invert )_ The mask background is again selected.
 - Replace background, etc...
 
 ### Script-fu
+- gimp scripts for drawing repeated selection outlines
+- add `script-fu` directory to gimp _( Edit | Preferences | Folders | Scripts )_
+- scripts will appear at bottom of _( Filters )_
 
 
   
