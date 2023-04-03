@@ -60,7 +60,7 @@ TFT #1 | Capture image
 
 ---
 
-![](images/table-blue.jpg)
+![](images/table-blue.png)
 
 ---
 
