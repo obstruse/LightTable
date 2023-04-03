@@ -81,7 +81,7 @@ TFT #1 | Capture image
   - **SAVE**: write current ISO value to config.ini.
 
 
-![](images/cam20230326-194558.jpg)
+![](images/TFTdisplay.jpg)
 
 ### TFT Buttons
 
