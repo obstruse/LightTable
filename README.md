@@ -152,7 +152,6 @@ saturation | image saturation | 20
 ### Capture
 - Select a color for the LCD light table that contrasts with the Object.
 - Color can be selected with a key: **r,g,b,y,c,m** or by rotating the color wheel **LEFT,RIGHT**
-- **BLUE** and **RED** work well.
 - Make small adjustments to the aperature as desired
 - Capture (key: **ENTER**)  You can also press TFT #1, but this can cause camera wobble leading to blurring...
 - Two images are captured:  a mask image, taken with the light table on, and a foreground image, taken with the light table off.
@@ -164,18 +163,13 @@ saturation | image saturation | 20
 - Invert the selection _( Select | Invert )_ Everything that isn't background is now selected.
 - Delete the selection.  This removes the object from the mask layer and reveals the foreground object below (taken when the light table was off)
 - Invert the selection _( Select | Invert )_ The mask background is again selected.
-- Replace background, etc...
+- Replace background with gradient, etc...
 
 
 ---
-![](images/tens-red3.png)
-![](images/loomdorm.png)
+![](images/tens-red3r.png)
+![](images/drill-Blue.png)
+![](images/bnc.png)
 ![](images/dragon2.png)
-
-
-
-
-
-
 
 
