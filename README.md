@@ -4,7 +4,7 @@
 
 
 ---
-Table Top Photograpy with Background Removal,  using an LCD monitor as a Light Table.
+Table Top Photography with Background Removal,  using an LCD monitor as a Light Table.
 Raspberry Pi HQ camera, Python, and Gimp.
 
 ---
