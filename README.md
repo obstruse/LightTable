@@ -30,7 +30,7 @@ This creates a mask that can be applied to the image taken with the light table 
 - Raspberry Pi HQ camera mounted approximately 80cm above monitor
 - 16mm lens
 - Raspberry Pi 3
-- PiTFT 320x240 display from [Adafruit](https://www.adafruit.com/product/2423)
+- PiTFT 320x240 capacitive touchscreen display from [Adafruit](https://www.adafruit.com/product/2423)
 
 
   ![](images/camera-33.png)
