@@ -1,6 +1,6 @@
 ; gimp script for drawing repeated selection outlines
 ; add this directory to gimp ( Edit | Preferences | Folders | Scripts )
-: Refresh scripts ( Filters | Script-Fu | Refresh Scripts )
+; Refresh scripts ( Filters | Script-Fu | Refresh Scripts )
 ; scripts will appear at bottom of ( Filters )
 
 (define (script-fu-shrink-stroke inImage inDrawable inShrinkth inColor inLoop inWidth ) 
